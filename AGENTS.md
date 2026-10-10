@@ -287,7 +287,9 @@ click continue to act as A/B for native UI.
 
 Mouse controls are enabled by default and can be toggled globally under
 **Settings… → General → Enable mouse controls**. When enabled, the game canvas
-uses a large blue-and-gold tactician pointer with an exact tip hotspot. Disabling
+uses a white pixel-art arrow pointer with an exact tip hotspot, drawn at display
+resolution with half a game pixel per pointer pixel so it stays sharp on Retina
+displays. Disabling
 the option immediately cancels pending mouse input and restores the normal macOS
 pointer; the preference also applies to games launched later from the library.
 

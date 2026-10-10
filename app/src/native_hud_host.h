@@ -11,6 +11,10 @@ typedef struct Fe8HudHost {
     Fe8VideoOverlay overlay;
     int scale_percent;
     bool enabled;
+    /* The buffer holds only the pointer, drawn at pointer_rect. */
+    bool pointer_only;
+    int pointer_width, pointer_height;
+    Fe8HudRect pointer_rect;
 } Fe8HudHost;
 
 /* Returns the original frame unless a complete, validated HUD can be drawn. */
@@ -20,6 +24,8 @@ const Fe8HostPixel *fe8_hud_host_update(Fe8HudHost *host,
     bool live_map, int frame_x, int frame_y);
 bool fe8_hud_host_contains(const Fe8HudHost *host, const Fe8HostVideo *video,
     int canvas_x, int canvas_y);
+/* Draws the mouse pointer at drawable resolution. Without a HUD this frame,
+ * the pointer gets an overlay of its own. */
 void fe8_hud_host_pointer(Fe8HudHost *host, const Fe8HostVideo *video,
     int canvas_x, int canvas_y);
 /* Returns true only for unbound +/-/0 key presses while the map HUD is live. */

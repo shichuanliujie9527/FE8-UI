@@ -144,7 +144,7 @@ the forced B release/new press cancels the selection rather than being mistaken
 for the already-held acceleration button.
 
 In **Settings… → General**, verify **Enable mouse controls** defaults on. The
-game canvas should replace the macOS arrow with the large blue-and-gold pointer,
+game canvas should replace the macOS arrow with the white pixel-art arrow pointer,
 while the Settings window itself retains the normal system pointer. Turning the
 option off must immediately restore the system pointer, cancel pending movement,
 and make map/UI clicks inert; turning it back on must restore mouse behavior and

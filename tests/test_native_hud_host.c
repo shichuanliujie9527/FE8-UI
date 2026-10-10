@@ -45,7 +45,22 @@ int main(void) {
     assert(capture[20*960+20]==0xFF00FF00);assert(capture[400*960+500]==0xFF0000FF);
     free(capture);free(canvas);
     fe8_hud_host_pointer(host,&video,479,319); /* clipped bottom-right pointer */
+    /* Without a HUD the pointer gets its own drawable-resolution overlay at
+       half a game pixel per cursor pixel; only the previous arrow is erased. */
+    host->overlay.pixels=NULL;host->pointer_only=false;
+    video.scaling.base_pixel_scale=4;
+    fe8_hud_host_pointer(host,&video,100,100);
+    assert(host->overlay.pixels==host->pixels&&host->pointer_only);
+    assert(host->pixels[20*960+20]==0); /* stale HUD pixels cleared */
+    assert(host->pixels[200*960+200]&&host->pixels[201*960+203]); /* 2x2 tip */
+    assert(!host->pixels[200*960+204]);
+    assert(!fe8_hud_host_contains(host,&video,100,100));
+    assert(!fe8_hud_host_shortcut(host,&settings,&event));
+    assert(!fe8_hud_host_capture(host,&video,NULL));
+    host->overlay.pixels=NULL;
+    fe8_hud_host_pointer(host,&video,300,300);
+    assert(!host->pixels[200*960+200]&&host->pixels[600*960+600]);
     fe8_hud_host_deinit(host);assert(!host->pixels&&!host->overlay.pixels);free(host);
-    puts("HUD zoom-independent hit testing, rebinding, scale shortcuts, capture and cursor clipping passed");
+    puts("HUD zoom-independent hit testing, rebinding, scale shortcuts, capture, cursor clipping and pointer overlay passed");
     return 0;
 }

@@ -1830,14 +1830,8 @@ static int run_game(int argc, char **argv) {
             SDL_ShowCursor(SDL_ENABLE);
             system_cursor_hidden = 0;
         }
-        if (settings.mouse_enabled && !inventory_ui.active && host_pointer_visible) {
-            if (hud_host->overlay.pixels)
-                fe8_hud_host_pointer(hud_host, &video, host_pointer_canvas_x, host_pointer_canvas_y);
-            else
-                fe8_host_draw_mouse_cursor(canvas, canvas_width,
-                    canvas_width, canvas_height,
-                    host_pointer_canvas_x, host_pointer_canvas_y);
-        }
+        if (settings.mouse_enabled && !inventory_ui.active && host_pointer_visible)
+            fe8_hud_host_pointer(hud_host, &video, host_pointer_canvas_x, host_pointer_canvas_y);
         {
             uint64_t stage_started = SDL_GetPerformanceCounter();
             int presented = fe8_host_video_present(&video, canvas, &hud_host->overlay);
