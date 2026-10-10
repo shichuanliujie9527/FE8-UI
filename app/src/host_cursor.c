@@ -18,8 +18,8 @@ int fe8_host_cursor_scale(double game_pixel_scale) {
 
 void fe8_host_draw_mouse_cursor(uint32_t *pixels, size_t stride,
     int width, int height, int hotspot_x, int hotspot_y) {
-    /* A classic pixel-art arrow: a white body with a one-pixel plum outline
-     * stays readable over both bright and dark FE8 terrain and menus. */
+    /* Mouse Cursor Sprite by Squidjees on Fire Emblem Universe. Its white
+     * body and one-pixel plum outline stay readable over FE8 terrain and menus. */
     static const char *const art[FE8_HOST_CURSOR_HEIGHT] = {
         "KK................",
         "KWK...............",

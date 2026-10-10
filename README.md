@@ -52,6 +52,8 @@ This project heavily leans on
 
 And both projects have been imported as reference / submodules.
 
+Mouse Cursor Sprite by Squidjees on Fire Emblem Universe.
+
 ## AI Disclaimer
 
 The project makes heavy use of AI. FYI if that bothers you.

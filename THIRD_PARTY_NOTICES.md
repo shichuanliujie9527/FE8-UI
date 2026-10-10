@@ -67,6 +67,11 @@ software license. No ROM, Nintendo-owned game data, artwork, music, or other
 copyrighted game content is distributed here. Users must supply legally
 obtained ROM files themselves.
 
+## Mouse cursor sprite
+
+Mouse Cursor Sprite by Squidjees on Fire Emblem Universe. The in-game arrow
+pointer (`app/src/host_cursor.c`) is Squidjees' artwork, used with credit.
+
 ## FreeType (non-Apple desktop text)
 
 The non-Apple frontend links to the system FreeType library. FreeType is available
