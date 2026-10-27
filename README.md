@@ -8,12 +8,15 @@ A big criticism I had of playing romhacks of FE8 was that they
 * Only rendered a small portion of the map
 * Didn't have mouse controls
 
-This project aims at fixing that. However, it requires small patches per romhack. The only ones I've tested myself are Sacred Echoes, Sacred Stones, and Archanae. Feel free to open issues for other ones.
+The frontend addresses these limitations by interpreting verified game layouts.
+libmGBA can run a ROM even when frontend extensions are unavailable. Compatible
+regional versions and translations can share a profile; changed memory or text
+layouts require separate validation. See [ROM profiles](docs/rom-profiles.md).
 
 # Features
 * Mouse item selection in the native trade menu for the exact supported Chinese FE8J ROM, using ordinary game inputs. [Behaviour and scope](docs/native-trade-mouse.md).
 * Extended renderer - make sure to enable this in settings
-* Mouse controls - only works when extended renderer is on. Only works for unit movement
+* Mouse map controls - move units on supported tactical maps when extended rendering is enabled. Native menus retain A/B clicks unless a verified menu adapter is available.
 * Inventory editor - Press `I`. This allows you to more easily swap units' stuff. Note that you can cheat with this, since it works all the time (even in combat!). Do with that as you wish.
 * Anchored native map HUD - supported unit, objective and terrain panels stay at the window edges, independently of map zoom. `+` / `-` resize the HUD; `0` resets it. Action menus stay beside the selected unit. [Controls, supported layouts and fallback behavior](docs/native-map-hud.md).
 
