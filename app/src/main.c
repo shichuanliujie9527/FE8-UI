@@ -638,6 +638,8 @@ static int run_game(int argc, char **argv) {
     int frozen_canvas_height = 0;
     int frozen_valid = 0;
     Fe8FramePlacement frozen_placement = {0};
+    /* Mouse events refer to the frame most recently presented. */
+    Fe8FramePlacement frame_placement = {0};
     int canvas_width = 0;
     int canvas_height = 0;
     int gba_x = GBA_X;
@@ -1635,7 +1637,7 @@ static int run_game(int argc, char **argv) {
         }
         extension_active = 0;
         rendered_map_sprites = 0;
-        Fe8FramePlacement frame_placement = {gba_x, gba_y, 0};
+        frame_placement = (Fe8FramePlacement){gba_x, gba_y, 0};
         if (settings.extensions_enabled && snapshot_valid && !inventory_ui.active) {
             int same_map = map_identity_valid &&
                 map_identity_chapter == snapshot.chapter &&
