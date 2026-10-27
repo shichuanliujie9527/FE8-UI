@@ -48,3 +48,17 @@ test_native_trade_rom.exe PRIVATE.gba TRADE.ss [PRIVATE-result.ss]
 
 Its fixture is the supplied Gilliam/Franz tutorial at the first selection step;
 it is not a general test for every trade state. Keep all inputs and outputs local.
+
+The supplied tutorial checkpoint was exercised locally on Windows on 2026-10-27.
+The controller selected the first right-side vulnerary, confirmed the offered
+left slot, advanced the completion dialogue and exited with B. Inventory values
+changed from left `[2D14, 0, 0, 0, 0]` / right `[2E01, 2D14, 036C, 036C, 0]`
+to left `[2D14, 036C, 0, 0, 0]` / right `[2E01, 2D14, 036C, 0, 0]`.
+The resulting state also loaded successfully in the combined Windows frontend
+with LCD enabled and returned to the map tutorial. The original checkpoint's
+SHA-256 remained unchanged; no fixture was uploaded or committed.
+
+The combined build passed 41 Windows and 38 Linux tests. This validates the
+supplied guided transfer and the tested controller guards, not every chapter
+or native game menu. The native trade adapter remains restricted to the exact
+Chinese ROM profile.
