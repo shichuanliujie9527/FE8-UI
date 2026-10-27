@@ -130,8 +130,11 @@ Fe8HostPixel *fe8_hud_host_capture(const Fe8HudHost *host,
     for (int y = 0; y < h; ++y) for (int x = 0; x < w; ++x) {
         uint32_t background = UINT32_C(0xFF0C0A08);
         if (x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height)
-            background = canvas[(size_t)((y - r.y) * video->canvas_height / r.height) *
-                video->canvas_width + (x - r.x) * video->canvas_width / r.width];
+        {
+            SDL_Rect source = fe8_host_video_source(video);
+            background = canvas[(size_t)(source.y + (y - r.y) * source.h / r.height) *
+                video->canvas_width + source.x + (x - r.x) * source.w / r.width];
+        }
         pixels[(size_t)y * w + x] = fe8_native_hud_over(host->pixels[(size_t)y * w + x], background);
     }
     return pixels;
