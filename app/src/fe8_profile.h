@@ -64,6 +64,8 @@ typedef struct Fe8Profile {
     Fe8InventoryLayout inventory;
     /* Rendering-only profiles must never enable inventory memory writes. */
     bool map_only;
+    /* Optional read-only native trade input adapter; never enables inventory writes. */
+    uint32_t trade_proc_pointer, trade_script, trade_idle_unselected, trade_idle_selected;
 } Fe8Profile;
 
 enum {

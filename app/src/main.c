@@ -24,6 +24,7 @@
 #include "macos_library.h"
 #include "macos_settings.h"
 #include "mouse_controller.h"
+#include "native_trade.h"
 #include "prebattle_inventory.h"
 #include "prebattle_inventory_ui.h"
 #include "inventory_desktop.h"
@@ -620,6 +621,7 @@ static int run_game(int argc, char **argv) {
     Fe8HostAudio audio = {0};
     Fe8HostVideo video = {0};
     Fe8MouseController mouse = {0};
+    Fe8TradeMouse trade_mouse = {0};
     Fe8InventoryUi inventory_ui;
     Fe8Catalog inventory_catalog = {0};
     Fe8InventorySnapshot inventory_snapshot = {0};
@@ -830,6 +832,7 @@ static int run_game(int argc, char **argv) {
         if (inventory_ui.active)
             inventory_ui.desktop_scale = inventory_point_scale(&video);
         if (state_reload_generation != applied_state_reload_generation) {
+            fe8_trade_mouse_cancel(&trade_mouse);
             applied_state_reload_generation = state_reload_generation;
             fe8_native_hud_reset(&hud_host->hud);
             hud_host->overlay.pixels = NULL;
@@ -1419,6 +1422,7 @@ static int run_game(int argc, char **argv) {
                 }
             } else if (event.type == SDL_MOUSEBUTTONDOWN &&
                     event.button.button == SDL_BUTTON_RIGHT && settings.mouse_enabled) {
+                fe8_trade_mouse_cancel(&trade_mouse);
                 fe8_mouse_cancel(&mouse);
                 pointer_tile_valid = 0;
                 pointer_canvas_valid = 0;
@@ -1433,6 +1437,20 @@ static int run_game(int argc, char **argv) {
                 int canvas_x;
                 int canvas_y;
                 int shift = (SDL_GetModState() & KMOD_SHIFT) != 0;
+                Fe8NativeTrade trade_state;
+                if (fe8_native_trade_read(&profile_memory, profile, &trade_state) && !trade_state.blocked) {
+                    fe8_mouse_cancel(&mouse);
+                    pointer_tile_valid = pointer_canvas_valid = 0;
+                    fe8_trade_mouse_cancel(&trade_mouse);
+                    if (!keyboard_keys && fe8_host_video_event_to_canvas(&video,
+                            event.button.x, event.button.y, &canvas_x, &canvas_y) &&
+                            fe8_trade_mouse_click(&trade_mouse, &trade_state,
+                                canvas_x-frame_placement.x, canvas_y-frame_placement.y))
+                        fprintf(stderr,"Mouse native trade: column=%d row=%d phase=%u\n",
+                            trade_mouse.column,trade_mouse.row,trade_state.phase);
+                    continue;
+                }
+                fe8_trade_mouse_cancel(&trade_mouse);
                 if (snapshot_valid && visual_profile_active &&
                         snapshot.input_lock == 0) {
                     if (!fe8_host_video_event_to_canvas(&video,
@@ -1551,6 +1569,8 @@ static int run_game(int argc, char **argv) {
                     fe8_mouse_cancel(&mouse);
                 }
                 update_keyboard(&keyboard_keys, &settings, &event);
+                if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP)
+                    fe8_trade_mouse_cancel(&trade_mouse);
                 set_speed_up_mode(
                     (hotkeys_down &
                         (UINT32_C(1) << FE8_HOST_HOTKEY_SPEED_UP)) != 0,
@@ -1571,7 +1591,11 @@ static int run_game(int argc, char **argv) {
             for (batch_index = 0; batch_index < batch_limit; ++batch_index) {
                 uint64_t stage_started = SDL_GetPerformanceCounter();
                 ++frame_count;
+                Fe8NativeTrade trade_state;
+                int trade_valid = settings.mouse_enabled && !keyboard_keys &&
+                    fe8_native_trade_read(&profile_memory, profile, &trade_state);
                 core->setKeys(core, keyboard_keys |
+                    fe8_trade_mouse_update(&trade_mouse, &trade_state, trade_valid) |
                     (options.auto_continue && !large_map_ready ?
                         scripted_continue_keys(frame_count) : 0) |
                     (frame_count <= 3 ? options.press_keys : 0) |

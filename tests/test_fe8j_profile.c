@@ -36,11 +36,13 @@ int main(void) {
     Fe8MemoryReader memory = {&space, fe8_address_space_read8};
     assert(!fe8_detect_supported_rom(NULL));
     assert(!fe8_detect_supported_rom(&memory)); /* Header alone is insufficient. */
+    assert(!fe8_profile_for_rom(&memory)->trade_proc_pointer);
     memcpy(space.rom_sha1, digest, sizeof(digest));
     assert(fe8_detect_supported_rom(&memory));
     assert(!fe8_detect_fe8u_family(&memory));
     const Fe8Profile *profile = fe8_profile_for_rom(&memory);
     assert(profile->map_only && profile->inventory.item_table == 0);
+    assert(profile->trade_proc_pointer == 0x0203A60C);
 
     /* Synthetic JP memory layout: 8x6 map, one unit, no active cursor motion. */
     put32(ram + 0x2E4D0, 8 | (6u << 16));

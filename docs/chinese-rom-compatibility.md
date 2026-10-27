@@ -12,6 +12,8 @@ This is an automated smoke test, not a human assessment of audio quality or
 a complete playthrough. The rendering checks below cover the initial small
 maps only. Chinese Armory decoding and inventory transfers remain
 disabled; the map-only restriction is enforced by the transaction layer too.
+The [native trade mouse adapter](native-trade-mouse.md) is separate: it selects
+items through ordinary GBA keys and leaves transfers and tutorial rules to the game.
 
 | Local image | Header | Size (bytes) | SHA-1 |
 | --- | --- | ---: | --- |
