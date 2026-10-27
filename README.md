@@ -2,6 +2,9 @@
 
 This project mainly adds extended rendering to FE8 + romhacks of FE8.
 
+This fork's independent feature PRs and their integration are listed in the
+[feature review map](docs/pr-series.md).
+
 ![Archanae Extended](/docs/archanae-extended.png)
 
 A big criticism I had of playing romhacks of FE8 was that they
