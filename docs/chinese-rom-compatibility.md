@@ -80,6 +80,13 @@ these captures and states in an ignored `build-*` directory. A failed state
 write returns a failing process exit status. When a large map is found earlier,
 the existing earlier checkpoint is retained.
 
+For repeatable navigation from a checkpoint, `--press-keys MASK` presses normal
+GBA buttons for the first three frames, then releases them. Masks are A=1, B=2,
+Select=4, Start=8, Right=16, Left=32, Up=64, Down=128, R=256, L=512; combinations
+up to 1023 are allowed. Pair this with `--state`, `--capture`, `--capture-after`
+and `--state-out`. It disables mouse input for that run without saving settings.
+This drives mGBA's public input API; it does not patch gameplay RAM or ROM data.
+
 1. Confirm boot and a playable tactical map through ordinary mGBA emulation,
    using isolated scratch saves rather than the player's existing progress.
 2. Verify FE8J map, camera, unit and sprite addresses for each exact image;

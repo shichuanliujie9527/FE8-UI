@@ -63,6 +63,7 @@ struct fe8_options {
     int extensions;
     unsigned capture_after;
     int auto_continue;
+    uint32_t press_keys;
     int seek_large_map;
     int realtime;
     int perf_stats;
@@ -103,6 +104,7 @@ static void usage(const char *program) {
         "       [--capture OUTPUT.bmp] [--capture-terrain OUTPUT.bmp]\n"
         "       [--capture-after FRAMES]\n"
         "       [--auto-continue] [--seek-large-map]\n"
+        "       [--press-keys GBA_KEY_MASK] (three-frame diagnostic press)\n"
         "       [--state-out CAPTURE_STATE.ss] [--quick-state QUICK_STATE.ss]\n"
         "       [--realtime] [--perf-stats] [--mute] [--inventory]\n"
         "       [--no-extensions] [--native-ui] [--hud-scale 80..200]\n", program);
@@ -149,6 +151,14 @@ static int parse_options(int argc, char **argv, struct fe8_options *options) {
             if (!*argv[i] || *end || frames > 1000000)
                 return 0;
             options->capture_after = (unsigned)frames;
+            continue;
+        } else if (strcmp(argv[i], "--press-keys") == 0) {
+            char *end;
+            unsigned long keys;
+            if (++i >= argc) return 0;
+            keys = strtoul(argv[i], &end, 0);
+            if (!*argv[i] || *end || keys > 0x3FF) return 0;
+            options->press_keys = (uint32_t)keys;
             continue;
         } else if (strcmp(argv[i], "--auto-continue") == 0) {
             options->auto_continue = 1;
@@ -692,6 +702,8 @@ static int run_game(int argc, char **argv) {
     fe8_macos_load_settings(&settings);
     if (options.mute)
         settings.audio_enabled = 0;
+    if (options.press_keys)
+        settings.mouse_enabled = 0; /* Keep a diagnostic replay deterministic. */
     fe8_inventory_ui_init(&inventory_ui);
     if (!options.extensions)
         settings.extensions_enabled = 0;
@@ -1562,6 +1574,7 @@ static int run_game(int argc, char **argv) {
                 core->setKeys(core, keyboard_keys |
                     (options.auto_continue && !large_map_ready ?
                         scripted_continue_keys(frame_count) : 0) |
+                    (frame_count < 3 ? options.press_keys : 0) |
                     fe8_mouse_update(&mouse, &live_state,
                         settings.mouse_enabled && live_state_valid &&
                         visual_profile_active));
