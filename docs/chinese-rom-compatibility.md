@@ -39,6 +39,13 @@ It reports candidates, not gameplay compatibility. A file shorter than the
 
 ## Validation needed before enabling a profile
 
+`--capture frame.bmp --capture-after 7200 --auto-continue --state-out test.ss`
+now also exports a checkpoint at capture time if no validated large map was
+found. This works for unknown ROMs and scenes with extensions disabled. Keep
+these captures and states in an ignored `build-*` directory. A failed state
+write returns a failing process exit status. When a large map is found earlier,
+the existing earlier checkpoint is retained.
+
 1. Confirm boot and a playable tactical map through ordinary mGBA emulation,
    using isolated scratch saves rather than the player's existing progress.
 2. Verify FE8J map, camera, unit and sprite addresses for each exact image;

@@ -103,7 +103,7 @@ static void usage(const char *program) {
         "       [--capture OUTPUT.bmp] [--capture-terrain OUTPUT.bmp]\n"
         "       [--capture-after FRAMES]\n"
         "       [--auto-continue] [--seek-large-map]\n"
-        "       [--state-out MAP_STATE.ss] [--quick-state QUICK_STATE.ss]\n"
+        "       [--state-out CAPTURE_STATE.ss] [--quick-state QUICK_STATE.ss]\n"
         "       [--realtime] [--perf-stats] [--mute] [--inventory]\n"
         "       [--no-extensions] [--native-ui] [--hud-scale 80..200]\n", program);
 }
@@ -1857,6 +1857,17 @@ static int run_game(int argc, char **argv) {
                      (inventory_ui.active && perf.presented_frames >= options.capture_after))) ||
                  (options.seek_large_map && large_map_ready) ||
                  (options.seek_large_map && frame_count >= 3600))) {
+            /* Unknown ROMs cannot pass the FE8 map gate. Preserve their
+             * exact capture checkpoint too, so a new profile can be
+             * investigated without changing the ROM or gameplay memory. */
+            if (options.state_out_path && !state_out_saved) {
+                if (!save_state(core, options.state_out_path)) {
+                    fprintf(stderr, "Unable to save capture state: %s\n", options.state_out_path);
+                    goto cleanup;
+                }
+                fprintf(stderr, "Saved capture state: %s\n", options.state_out_path);
+                state_out_saved = 1;
+            }
             Fe8HostPixel *hud_capture = fe8_hud_host_capture(hud_host, &video, canvas);
             if (!save_canvas_bmp(options.capture_path,
                     hud_capture ? hud_capture : canvas,
