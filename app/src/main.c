@@ -24,6 +24,7 @@
 #include "macos_library.h"
 #include "macos_settings.h"
 #include "mouse_controller.h"
+#include "native_trade.h"
 #include "prebattle_inventory.h"
 #include "prebattle_inventory_ui.h"
 #include "inventory_desktop.h"
@@ -63,6 +64,7 @@ struct fe8_options {
     int extensions;
     unsigned capture_after;
     int auto_continue;
+    uint32_t press_keys;
     int seek_large_map;
     int realtime;
     int perf_stats;
@@ -103,7 +105,8 @@ static void usage(const char *program) {
         "       [--capture OUTPUT.bmp] [--capture-terrain OUTPUT.bmp]\n"
         "       [--capture-after FRAMES]\n"
         "       [--auto-continue] [--seek-large-map]\n"
-        "       [--state-out MAP_STATE.ss] [--quick-state QUICK_STATE.ss]\n"
+        "       [--press-keys GBA_KEY_MASK] (three-frame diagnostic press)\n"
+        "       [--state-out CAPTURE_STATE.ss] [--quick-state QUICK_STATE.ss]\n"
         "       [--realtime] [--perf-stats] [--mute] [--inventory]\n"
         "       [--no-extensions] [--native-ui] [--hud-scale 80..200]\n", program);
 }
@@ -149,6 +152,14 @@ static int parse_options(int argc, char **argv, struct fe8_options *options) {
             if (!*argv[i] || *end || frames > 1000000)
                 return 0;
             options->capture_after = (unsigned)frames;
+            continue;
+        } else if (strcmp(argv[i], "--press-keys") == 0) {
+            char *end;
+            unsigned long keys;
+            if (++i >= argc) return 0;
+            keys = strtoul(argv[i], &end, 0);
+            if (!*argv[i] || *end || keys > 0x3FF) return 0;
+            options->press_keys = (uint32_t)keys;
             continue;
         } else if (strcmp(argv[i], "--auto-continue") == 0) {
             options->auto_continue = 1;
@@ -610,6 +621,7 @@ static int run_game(int argc, char **argv) {
     Fe8HostAudio audio = {0};
     Fe8HostVideo video = {0};
     Fe8MouseController mouse = {0};
+    Fe8TradeMouse trade_mouse = {0};
     Fe8InventoryUi inventory_ui;
     Fe8Catalog inventory_catalog = {0};
     Fe8InventorySnapshot inventory_snapshot = {0};
@@ -626,6 +638,8 @@ static int run_game(int argc, char **argv) {
     int frozen_canvas_height = 0;
     int frozen_valid = 0;
     Fe8FramePlacement frozen_placement = {0};
+    /* Mouse events refer to the frame most recently presented. */
+    Fe8FramePlacement frame_placement = {0};
     int canvas_width = 0;
     int canvas_height = 0;
     int gba_x = GBA_X;
@@ -692,6 +706,8 @@ static int run_game(int argc, char **argv) {
     fe8_macos_load_settings(&settings);
     if (options.mute)
         settings.audio_enabled = 0;
+    if (options.press_keys)
+        settings.mouse_enabled = 0; /* Keep a diagnostic replay deterministic. */
     fe8_inventory_ui_init(&inventory_ui);
     if (!options.extensions)
         settings.extensions_enabled = 0;
@@ -743,7 +759,9 @@ static int run_game(int argc, char **argv) {
         fprintf(stderr, "Inventory metadata unavailable for this ROM\n");
     render_memory.context = &address_space;
     render_memory.read8 = fe8_address_space_read8;
-    family_match = fe8_detect_fe8u_family(&profile_memory);
+    family_match = fe8_detect_supported_rom(&profile_memory);
+    /* Relocate the HUD only when this layout explicitly supports it. */
+    hud_host->enabled = !options.native_ui && fe8_profile_has(profile, FE8_CAP_NATIVE_HUD);
     fprintf(stderr, "FE8 extensions: %s\n", family_match && settings.extensions_enabled ? profile->profile_name :
         (!settings.extensions_enabled ? "disabled by settings" : "disabled (unknown ROM)"));
 
@@ -816,6 +834,7 @@ static int run_game(int argc, char **argv) {
         if (inventory_ui.active)
             inventory_ui.desktop_scale = inventory_point_scale(&video);
         if (state_reload_generation != applied_state_reload_generation) {
+            fe8_trade_mouse_cancel(&trade_mouse);
             applied_state_reload_generation = state_reload_generation;
             fe8_native_hud_reset(&hud_host->hud);
             hud_host->overlay.pixels = NULL;
@@ -898,7 +917,7 @@ static int run_game(int argc, char **argv) {
                     inventory_ui.active ? FE8_HOST_SHADER_OFF : settings.shader))
                 fprintf(stderr, "Unable to apply shader '%s'\n",
                     fe8_host_shader_name(settings.shader));
-            family_match = fe8_detect_fe8u_family(&profile_memory);
+            family_match = fe8_detect_supported_rom(&profile_memory);
             visual_profile_active = 0;
             fe8_presentation_reset(&presentation);
             frozen_valid = 0;
@@ -1405,6 +1424,7 @@ static int run_game(int argc, char **argv) {
                 }
             } else if (event.type == SDL_MOUSEBUTTONDOWN &&
                     event.button.button == SDL_BUTTON_RIGHT && settings.mouse_enabled) {
+                fe8_trade_mouse_cancel(&trade_mouse);
                 fe8_mouse_cancel(&mouse);
                 pointer_tile_valid = 0;
                 pointer_canvas_valid = 0;
@@ -1419,6 +1439,20 @@ static int run_game(int argc, char **argv) {
                 int canvas_x;
                 int canvas_y;
                 int shift = (SDL_GetModState() & KMOD_SHIFT) != 0;
+                Fe8NativeTrade trade_state;
+                if (fe8_native_trade_read(&profile_memory, profile, &trade_state) && !trade_state.blocked) {
+                    fe8_mouse_cancel(&mouse);
+                    pointer_tile_valid = pointer_canvas_valid = 0;
+                    fe8_trade_mouse_cancel(&trade_mouse);
+                    if (!keyboard_keys && fe8_host_video_event_to_canvas(&video,
+                            event.button.x, event.button.y, &canvas_x, &canvas_y) &&
+                            fe8_trade_mouse_click(&trade_mouse, &trade_state,
+                                canvas_x-frame_placement.x, canvas_y-frame_placement.y))
+                        fprintf(stderr,"Mouse native trade: column=%d row=%d phase=%u\n",
+                            trade_mouse.column,trade_mouse.row,trade_state.phase);
+                    continue;
+                }
+                fe8_trade_mouse_cancel(&trade_mouse);
                 if (snapshot_valid && visual_profile_active &&
                         snapshot.input_lock == 0) {
                     if (!fe8_host_video_event_to_canvas(&video,
@@ -1537,6 +1571,8 @@ static int run_game(int argc, char **argv) {
                     fe8_mouse_cancel(&mouse);
                 }
                 update_keyboard(&keyboard_keys, &settings, &event);
+                if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP)
+                    fe8_trade_mouse_cancel(&trade_mouse);
                 set_speed_up_mode(
                     (hotkeys_down &
                         (UINT32_C(1) << FE8_HOST_HOTKEY_SPEED_UP)) != 0,
@@ -1557,9 +1593,14 @@ static int run_game(int argc, char **argv) {
             for (batch_index = 0; batch_index < batch_limit; ++batch_index) {
                 uint64_t stage_started = SDL_GetPerformanceCounter();
                 ++frame_count;
+                Fe8NativeTrade trade_state;
+                int trade_valid = settings.mouse_enabled && !keyboard_keys &&
+                    fe8_native_trade_read(&profile_memory, profile, &trade_state);
                 core->setKeys(core, keyboard_keys |
+                    fe8_trade_mouse_update(&trade_mouse, &trade_state, trade_valid) |
                     (options.auto_continue && !large_map_ready ?
                         scripted_continue_keys(frame_count) : 0) |
+                    (frame_count <= 3 ? options.press_keys : 0) |
                     fe8_mouse_update(&mouse, &live_state,
                         settings.mouse_enabled && live_state_valid &&
                         visual_profile_active));
@@ -1596,7 +1637,7 @@ static int run_game(int argc, char **argv) {
         }
         extension_active = 0;
         rendered_map_sprites = 0;
-        Fe8FramePlacement frame_placement = {gba_x, gba_y, 0};
+        frame_placement = (Fe8FramePlacement){gba_x, gba_y, 0};
         if (settings.extensions_enabled && snapshot_valid && !inventory_ui.active) {
             int same_map = map_identity_valid &&
                 map_identity_chapter == snapshot.chapter &&
@@ -1857,6 +1898,17 @@ static int run_game(int argc, char **argv) {
                      (inventory_ui.active && perf.presented_frames >= options.capture_after))) ||
                  (options.seek_large_map && large_map_ready) ||
                  (options.seek_large_map && frame_count >= 3600))) {
+            /* Unknown ROMs cannot pass the FE8 map gate. Preserve their
+             * exact capture checkpoint too, so a new profile can be
+             * investigated without changing the ROM or gameplay memory. */
+            if (options.state_out_path && !state_out_saved) {
+                if (!save_state(core, options.state_out_path)) {
+                    fprintf(stderr, "Unable to save capture state: %s\n", options.state_out_path);
+                    goto cleanup;
+                }
+                fprintf(stderr, "Saved capture state: %s\n", options.state_out_path);
+                state_out_saved = 1;
+            }
             Fe8HostPixel *hud_capture = fe8_hud_host_capture(hud_host, &video, canvas);
             if (!save_canvas_bmp(options.capture_path,
                     hud_capture ? hud_capture : canvas,

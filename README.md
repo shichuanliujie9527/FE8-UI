@@ -11,6 +11,7 @@ A big criticism I had of playing romhacks of FE8 was that they
 This project aims at fixing that. However, it requires small patches per romhack. The only ones I've tested myself are Sacred Echoes, Sacred Stones, and Archanae. Feel free to open issues for other ones.
 
 # Features
+* Mouse item selection in the native trade menu for the exact supported Chinese FE8J ROM, using ordinary game inputs. [Behaviour and scope](docs/native-trade-mouse.md).
 * Extended renderer - make sure to enable this in settings
 * Mouse controls - only works when extended renderer is on. Only works for unit movement
 * Inventory editor - Press `I`. This allows you to more easily swap units' stuff. Note that you can cheat with this, since it works all the time (even in combat!). Do with that as you wish.
@@ -42,6 +43,12 @@ Please open GitHub issues! Right now, the way I've tested this project is by doi
 * Pokemblem
 * Archanae
 * Cerulean Crescent
+
+Exact-image registrations can share verified layouts and opt into individual
+capabilities. The additional FE8J translation profile supports map rendering and
+native trade input; relocated HUD and Armory remain disabled. See
+[adding regional versions and translations](docs/rom-profiles.md) and the
+[validated scope](docs/chinese-rom-compatibility.md).
 
 Please try out more romhacks and file issues if they don't work well!
 

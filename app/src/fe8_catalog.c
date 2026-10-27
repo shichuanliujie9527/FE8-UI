@@ -24,6 +24,8 @@ bool fe8_catalog_init(const Fe8MemoryReader *memory, const Fe8Profile *profile,
     if (!memory || !memory->read8 || !profile || !catalog)
         return false;
     memset(catalog, 0, sizeof(*catalog));
+    if (!fe8_profile_has(profile, FE8_CAP_INVENTORY))
+        return false;
     root_pointer = r32(memory, profile->inventory.huffman_root_literal);
     catalog->message_table = r32(memory, profile->inventory.message_table_literal);
     catalog->huffman_root = rom(root_pointer, 4) ? r32(memory, root_pointer) : 0;

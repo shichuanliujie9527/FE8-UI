@@ -2,6 +2,7 @@
 #define FE8_PROFILE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -30,6 +31,28 @@ typedef struct Fe8InventoryLayout {
     /* Optional SkillSystem high-byte character/class lock pointer table. */
     uint32_t weapon_lock_table;
 } Fe8InventoryLayout;
+
+enum Fe8ProfileCapability {
+    FE8_CAP_MAP = 1u << 0,
+    FE8_CAP_INVENTORY = 1u << 1,
+    FE8_CAP_NATIVE_HUD = 1u << 2,
+    FE8_CAP_HP_BAR_PATCH = 1u << 3,
+    FE8_CAP_NATIVE_TRADE = 1u << 4,
+};
+
+enum Fe8TradeTutorialPolicy {
+    FE8_TRADE_TUTORIAL_NONE,
+    FE8_TRADE_TUTORIAL_VULNERARY,
+};
+
+/* FE8's two-column, five-slot trade process ABI. Addresses, item IDs and
+ * screen geometry belong to a verified layout, not a language detector. */
+typedef struct Fe8NativeTradeLayout {
+    uint32_t proc_pointer, script, idle_unselected, idle_selected;
+    unsigned tutorial_policy;
+    uint16_t tutorial_item_id;
+    uint8_t column_x[2], column_width, first_row_y, row_height;
+} Fe8NativeTradeLayout;
 
 typedef struct Fe8Profile {
     uint32_t rom_title;
@@ -62,7 +85,27 @@ typedef struct Fe8Profile {
     const char *profile_name;
     const char *rom_title_match;
     Fe8InventoryLayout inventory;
+    /* Opt-in capabilities: validating map data never enables inventory writes. */
+    uint32_t capabilities;
+    const Fe8NativeTradeLayout *native_trade;
 } Fe8Profile;
+
+static inline bool fe8_profile_has(const Fe8Profile *profile, uint32_t capability) {
+    return profile && (profile->capabilities & capability) == capability;
+}
+
+/* Multiple exact ROM identities can share one independently verified layout.
+ * No language, filename or header-only alias grants additional capabilities. */
+typedef struct Fe8RomProfileEntry {
+    const char *game_code;
+    const char *maker_code;
+    uint8_t sha1[20];
+    const Fe8Profile *profile;
+} Fe8RomProfileEntry;
+
+const Fe8Profile *fe8_profile_match_exact(const char game_code[4],
+    const char maker_code[2], const uint8_t sha1[20],
+    const Fe8RomProfileEntry *entries, size_t count);
 
 enum {
     FE8_MAX_MAP_WIDTH = 64,
@@ -173,6 +216,9 @@ bool fe8_detect_retail_fe8u(const Fe8MemoryReader *memory);
 
 /* Header-family check for FE8U hacks; structural validation is still required. */
 bool fe8_detect_fe8u_family(const Fe8MemoryReader *memory);
+
+/* FE8U family, or an exact independently verified non-US ROM profile. */
+bool fe8_detect_supported_rom(const Fe8MemoryReader *memory);
 
 bool fe8_extract_live_state(
     const Fe8MemoryReader *memory,

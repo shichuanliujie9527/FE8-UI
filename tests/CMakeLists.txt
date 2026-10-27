@@ -22,6 +22,13 @@ function(fe8_add_test name)
     add_test(NAME ${name} COMMAND test_${name})
 endfunction()
 
+fe8_add_test(native_trade test_native_trade.c ../app/src/native_trade.c)
+add_executable(test_native_trade_rom test_native_trade_rom.c ../app/src/native_trade.c
+    ../app/src/fe8_profile.c ../app/src/address_space.c)
+target_include_directories(test_native_trade_rom PRIVATE ../app/src)
+target_compile_definitions(test_native_trade_rom PRIVATE $<TARGET_PROPERTY:mgba,COMPILE_DEFINITIONS>)
+target_link_libraries(test_native_trade_rom PRIVATE mgba)
+
 if(WIN32)
     fe8_add_test(windows_launcher test_windows_launcher.c ../app/src/windows_launcher.c)
     target_link_libraries(test_windows_launcher PRIVATE mgba ${FE8_SDL_TARGET} comdlg32)
@@ -35,13 +42,18 @@ fe8_add_test(address_space
     test_address_space.c ../app/src/address_space.c)
 target_link_libraries(test_address_space PRIVATE mgba)
 
-foreach(name IN ITEMS fe8_profile archanae_profile)
+foreach(name IN ITEMS fe8_profile archanae_profile rom_profile_registry)
     fe8_add_test(${name}
         test_${name}.c
         ../app/src/address_space.c
         ../app/src/fe8_profile.c)
     target_link_libraries(test_${name} PRIVATE mgba)
 endforeach()
+
+fe8_add_test(fe8j_profile test_fe8j_profile.c
+    ../app/src/address_space.c ../app/src/fe8_profile.c
+    ../app/src/fe8_catalog.c ../app/src/prebattle_inventory.c)
+target_link_libraries(test_fe8j_profile PRIVATE mgba)
 
 foreach(name IN ITEMS
         frame_scheduler extended_map_renderer extended_presentation

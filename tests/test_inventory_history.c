@@ -13,7 +13,7 @@ static void put(uint32_t address,uint32_t value,int count) {
     for(int i=0;i<count;++i)w8(NULL,address+i,(uint8_t)(value>>(i*8)));
 }
 int main(void) {
-    Fe8Profile p={0};p.blue_units=0x0202BE4C;p.convoy_items=0x0203B200;p.inventory.convoy_capacity=200;
+    Fe8Profile p={0};p.capabilities=FE8_CAP_INVENTORY;p.blue_units=0x0202BE4C;p.convoy_items=0x0203B200;p.inventory.convoy_capacity=200;
     put(p.blue_units,0x08001000,4); /* Structurally valid active roster gate. */
     Fe8MemoryReader reader={NULL,r8};Fe8MemoryWriter writer={NULL,w8};Fe8InventoryHistory h={0};
     Fe8InventoryEndpoint a={FE8_INVENTORY_ENDPOINT_UNIT,p.blue_units,0};
