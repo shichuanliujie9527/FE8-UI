@@ -18,7 +18,14 @@ static void wait_tutorial(struct mCore *core,const Fe8MemoryReader *r,const Fe8P
     for(int i=0;i<2400;++i) {
         Fe8NativeTrade s;int valid=fe8_native_trade_read(r,p,&s);
         if(valid && !s.blocked && s.tutorial==tutorial) {core->setKeys(core,0);return;}
-        core->setKeys(core,valid && s.blocked && i%40<3?1:0);core->runFrame(core);
+        /* After the transfer, the game clears the selection callback while
+         * its completion dialogue blocks the parent. The production adapter
+         * deliberately rejects that transient state; ordinary A still advances
+         * dialogue, just as the frontend's generic click fallback does. */
+        uint32_t proc=core->busRead32(core,p->trade_proc_pointer);
+        int dialogue=proc>=0x02000000 && proc<=0x0203FF94 && !(proc&3) &&
+            core->busRead32(core,proc)==p->trade_script && core->busRead8(core,proc+0x28);
+        core->setKeys(core,dialogue && i%40<3?1:0);core->runFrame(core);
     }
     fprintf(stderr,"Tutorial %d did not become ready\n",tutorial);assert(0);
 }
