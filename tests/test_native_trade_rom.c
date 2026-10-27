@@ -2,6 +2,7 @@
  * game's own button-driven trade code may change the emulated inventory. */
 #include <mgba/flags.h>
 #include <mgba/core/core.h>
+#include <mgba/core/log.h>
 #include <mgba/core/serialize.h>
 #include <mgba-util/vfs.h>
 #include "address_space.h"
@@ -43,6 +44,8 @@ static int run(int argc,char **argv) {
     struct VFile *rom=VFileOpen(argv[1],O_RDONLY);assert(rom);
     struct mCore *core=mCoreFindVF(rom);rom->close(rom);assert(core && core->init(core));
     mCoreInitConfig(core,"native-trade-test");rom=VFileOpen(argv[1],O_RDONLY);
+    struct mStandardLogger logger; mStandardLoggerInit(&logger);
+    logger.d.filter->defaultLevels=mLOG_FATAL|mLOG_ERROR; mLogSetDefaultLogger(&logger.d);
     assert(rom && core->loadROM(core,rom));
     mColor *pixels=calloc(240*160,sizeof(*pixels));assert(pixels);core->setVideoBuffer(core,pixels,240);core->reset(core);
     struct VFile *state=VFileOpen(argv[2],O_RDONLY);assert(state);
@@ -68,8 +71,10 @@ static int run(int argc,char **argv) {
     for(int i=0;i<90;++i){core->setKeys(core,i<3?2:0);core->runFrame(core);}
     assert(!fe8_native_trade_read(&reader,profile,&after));
     if(argc==4){state=VFileOpen(argv[3],O_CREAT|O_TRUNC|O_RDWR);assert(state);assert(mCoreSaveStateNamed(core,state,SAVESTATE_ALL));state->close(state);}
+    mCoreConfigDeinit(&core->config);core->deinit(core);free(pixels);
+    mLogSetDefaultLogger(NULL);mStandardLoggerDeinit(&logger);
     puts("PASS: mouse-target navigation selected vulnerary, native game transferred it, tutorial completed, trade closed.");
-    core->deinit(core);free(core);free(pixels);return 0;
+    return 0;
 }
 #ifdef _WIN32
 int wmain(int argc,wchar_t **wide) {
