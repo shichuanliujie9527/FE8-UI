@@ -43,7 +43,12 @@ int main(void) {
     host->pixels[20*960+20]=0xFF00FF00;
     Fe8HostPixel *capture=fe8_hud_host_capture(host,&video,canvas);assert(capture);
     assert(capture[20*960+20]==0xFF00FF00);assert(capture[400*960+500]==0xFF0000FF);
-    free(capture);free(canvas);
+    free(capture);
+    video.source_rect=(SDL_Rect){120,80,240,160};
+    canvas[80*480+120]=0xFF123456;
+    capture=fe8_hud_host_capture(host,&video,canvas);assert(capture);
+    assert(capture[0]==0xFF123456);
+    free(capture);free(canvas);video.source_rect=(SDL_Rect){0};
     fe8_hud_host_pointer(host,&video,479,319); /* clipped bottom-right pointer */
     /* Without a HUD the pointer gets its own drawable-resolution overlay at
        half a game pixel per cursor pixel; only the previous arrow is erased. */
