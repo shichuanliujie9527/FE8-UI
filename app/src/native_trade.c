@@ -33,7 +33,7 @@ int fe8_native_trade_read(const Fe8MemoryReader *m, const Fe8Profile *p, Fe8Nati
             unsigned selectable=m->read8(m->context,proc+0x34+col*6+row);
             if(selectable>1) return 0;
             out->selectable[col][row]=(uint8_t)selectable;
-            out->items[col][row]=(uint16_t)read16(m,unit+0x1E+row*2);
+            out->items[col][row]=(uint16_t)read16(m, unit + 0x1E + row * 2);
         }
     }
     return out->units[0]!=out->units[1] && out->selectable[out->column][out->row];
