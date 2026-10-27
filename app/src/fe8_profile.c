@@ -60,11 +60,6 @@
 #define ARCHANAE_CONVOY_ITEMS UINT32_C(0x0203B200)
 #define ARCHANAE_WEAPON_LOCK_TABLE UINT32_C(0x08B2BAE4)
 
-static const uint8_t s_archanae_sha1[FE8_ROM_SHA1_SIZE] = {
-    0x22, 0x0D, 0x1D, 0x6B, 0x5F, 0x56, 0xC9, 0xE2, 0x5E, 0xB6,
-    0x66, 0xA7, 0xF3, 0xDD, 0x7C, 0x48, 0x6A, 0x75, 0x94, 0x17,
-};
-
 #define FE8_PROFILE_COMMON \
     FE8_HEADER_TITLE, FE8_HEADER_GAME_CODE, FE8_HEADER_MAKER_CODE, 0, 0x9D, \
     FE8_BM_STATE, FE8_PLAY_STATE, FE8_MAP_SIZE, FE8_MAP_UNIT, FE8_MAP_TERRAIN, \
@@ -83,6 +78,7 @@ static const Fe8Profile s_fe8u_profile = {
     FE8_PROFILE_COMMON, FE8_CONVOY_ITEMS,
     "Fire Emblem 8 (FE8U)", "FIREEMBLEM2E",
     FE8_INVENTORY_LAYOUT(FE8_ITEM_TABLE, FE8_GET_CONVOY_ITEMS, 100, 0, 0),
+    FE8_CAP_MAP | FE8_CAP_INVENTORY | FE8_CAP_NATIVE_HUD | FE8_CAP_HP_BAR_PATCH,
 };
 
 static const Fe8Profile s_sacred_echoes_profile = {
@@ -92,6 +88,7 @@ static const Fe8Profile s_sacred_echoes_profile = {
        items. Native inventory management never permits transferring them. */
     FE8_INVENTORY_LAYOUT(FE8_ITEM_TABLE, FE8_GET_CONVOY_ITEMS, 200,
         UINT32_C(0x00000006), 0),
+    FE8_CAP_MAP | FE8_CAP_INVENTORY | FE8_CAP_NATIVE_HUD | FE8_CAP_HP_BAR_PATCH,
 };
 
 static const Fe8Profile s_archanae_profile = {
@@ -99,7 +96,10 @@ static const Fe8Profile s_archanae_profile = {
     "Fire Emblem: Archanae", "FIREEMBLEM2E",
     FE8_INVENTORY_LAYOUT(ARCHANAE_ITEM_TABLE, ARCHANAE_GET_CONVOY_ITEMS, 200, 0,
         ARCHANAE_WEAPON_LOCK_TABLE),
+    FE8_CAP_MAP | FE8_CAP_INVENTORY | FE8_CAP_NATIVE_HUD | FE8_CAP_HP_BAR_PATCH,
 };
+
+#include "fe8_profile_registry.inc"
 
 static bool valid_reader(const Fe8MemoryReader *memory) {
     return memory && memory->read8;
@@ -237,16 +237,45 @@ const Fe8Profile *fe8u_profile(void) {
     return &s_fe8u_profile;
 }
 
+const Fe8Profile *fe8_profile_match_exact(const char game_code[4],
+    const char maker_code[2], const uint8_t sha1[20],
+    const Fe8RomProfileEntry *entries, size_t count) {
+    if (!game_code || !maker_code || !sha1 || !entries)
+        return NULL;
+    for (size_t i = 0; i < count; ++i) {
+        const Fe8RomProfileEntry *entry = &entries[i];
+        if (entry->profile && entry->game_code && entry->maker_code &&
+                strlen(entry->game_code) == 4 && strlen(entry->maker_code) == 2 &&
+                memcmp(game_code, entry->game_code, 4) == 0 &&
+                memcmp(maker_code, entry->maker_code, 2) == 0 &&
+                memcmp(sha1, entry->sha1, FE8_ROM_SHA1_SIZE) == 0)
+            return entry->profile;
+    }
+    return NULL;
+}
+
+static const Fe8Profile *exact_profile(const Fe8MemoryReader *memory) {
+    if (!valid_reader(memory) || memory->read8 != fe8_address_space_read8)
+        return NULL;
+    const uint8_t *sha1 = fe8_address_space_rom_sha1(memory->context);
+    if (!sha1)
+        return NULL;
+    char code[4], maker[2];
+    for (unsigned i = 0; i < sizeof(code); ++i)
+        code[i] = (char)read8(memory, FE8_HEADER_GAME_CODE + i);
+    for (unsigned i = 0; i < sizeof(maker); ++i)
+        maker[i] = (char)read8(memory, FE8_HEADER_MAKER_CODE + i);
+    return fe8_profile_match_exact(code, maker, sha1, s_exact_profiles,
+        sizeof(s_exact_profiles) / sizeof(s_exact_profiles[0]));
+}
+
 const Fe8Profile *fe8_profile_for_rom(const Fe8MemoryReader *memory) {
-    const uint8_t *rom_sha1 = NULL;
-    if (!fe8u_family_header(memory))
-        return &s_fe8u_profile;
-    if (memory->read8 == fe8_address_space_read8)
-        rom_sha1 = fe8_address_space_rom_sha1(memory->context);
-    if (rom_sha1 &&
-            memcmp(rom_sha1, s_archanae_sha1, sizeof(s_archanae_sha1)) == 0)
-        return &s_archanae_profile;
-    if (returned_pointer(memory, FE8_GET_CONVOY_ITEMS) ==
+    const Fe8Profile *matched = exact_profile(memory);
+    if (matched)
+        return matched;
+    /* Preserve the upstream FE8U-family fallback and its runtime validators.
+     * Other regions require an exact registered identity. */
+    if (fe8u_family_header(memory) && returned_pointer(memory, FE8_GET_CONVOY_ITEMS) ==
             SACRED_ECHOES_CONVOY_ITEMS)
         return &s_sacred_echoes_profile;
     return &s_fe8u_profile;
@@ -254,6 +283,11 @@ const Fe8Profile *fe8_profile_for_rom(const Fe8MemoryReader *memory) {
 
 bool fe8_detect_fe8u_family(const Fe8MemoryReader *memory) {
     return fe8u_family_header(memory);
+}
+
+bool fe8_detect_supported_rom(const Fe8MemoryReader *memory) {
+    return fe8u_family_header(memory) ||
+        fe8_profile_has(exact_profile(memory), FE8_CAP_MAP);
 }
 
 bool fe8_detect_retail_fe8u(const Fe8MemoryReader *memory) {
@@ -398,7 +432,7 @@ bool fe8_extract_live_state(
     const Fe8MemoryReader *memory, const Fe8Profile *profile, Fe8LiveState *state) {
     uint16_t width;
     uint16_t height;
-    if (!valid_reader(memory) || !profile || !state ||
+    if (!valid_reader(memory) || !fe8_profile_has(profile, FE8_CAP_MAP) || !state ||
             !valid_ewram(profile->bm_state, 0x2C) ||
             !valid_ewram(profile->play_state, 0x14) ||
             !valid_ewram(profile->map_size, 4))
@@ -451,7 +485,7 @@ bool fe8_extract_snapshot(
     if (!snapshot || !fe8_extract_live_state(memory, profile, &live))
         return false;
     memset(snapshot, 0, sizeof(*snapshot));
-    if (map_hp_bar_patch_present(memory))
+    if (fe8_profile_has(profile, FE8_CAP_HP_BAR_PATCH) && map_hp_bar_patch_present(memory))
         snapshot->flags |= FE8_SNAPSHOT_HP_BARS;
     width = live.map_width;
     height = live.map_height;

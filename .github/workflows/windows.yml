@@ -53,3 +53,11 @@ jobs:
           path: build-windows/tests/Release/test_lcd_presentation.exe
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload native trade local test utility
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-trade-test-windows-x64
+          path: build-windows/tests/Release/test_native_trade_rom.exe
+          if-no-files-found: error
+          retention-days: 14

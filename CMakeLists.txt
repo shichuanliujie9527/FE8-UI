@@ -62,6 +62,7 @@ add_executable(fe8-mgba-sdl
     app/src/extended_presentation.c
     app/src/extended_unit_renderer.c
     app/src/mouse_controller.c
+    app/src/native_trade.c
     app/src/fe8_catalog.c
     app/src/prebattle_inventory.c
     app/src/prebattle_inventory_ui.c
