@@ -43,6 +43,10 @@ Please open GitHub issues! Right now, the way I've tested this project is by doi
 * Archanae
 * Cerulean Crescent
 
+This branch also includes an initial, exact-hash FE8J Chinese rendering profile
+for Sacred Stones (Wolf/Fire Emblem China translation). Host inventory editing
+is disabled for that profile. See the [validated scope and remaining checks](docs/chinese-rom-compatibility.md).
+
 Please try out more romhacks and file issues if they don't work well!
 
 # Project Credits

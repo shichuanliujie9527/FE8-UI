@@ -9,8 +9,8 @@ No ROM, BIOS, save or game asset is included.
 Boot and a tactical scene were captured locally on Windows after 7,200 frames
 using ordinary A/Start input. The SDL audio pipeline reported nonzero samples.
 This is an automated smoke test, not a human assessment of audio quality or
-a complete playthrough. Extended-map runtime validation is tracked separately
-from this baseline. Chinese Armory decoding and inventory transfers remain
+a complete playthrough. The rendering checks below cover the initial small
+maps only. Chinese Armory decoding and inventory transfers remain
 disabled; the map-only restriction is enforced by the transaction layer too.
 
 | Local image | Header | Size (bytes) | SHA-1 |
@@ -59,6 +59,37 @@ FE8U HP-bar patch probing and inventory editing are disabled for this profile.
 The `fe8j_profile` synthetic test checks identity rejection, map extraction,
 invalid row fallback and both inventory transaction entry points without ROMs.
 
+## Verified on Windows
+
+The code at `dc3487b8` passed all 35 Windows CTests, compilation, command-line
+startup and packaging in
+[run 40471560218](https://github.com/shichuanliujie9527/FE8-UI/actions/runs/40471560218).
+The following additional checks used the local ROM, never a CI upload:
+
+- Booted from the original Chinese filename and ran normal scripted inputs.
+- Saved and restored a raw mGBA checkpoint with Chinese characters in its path.
+- Restored the 7,200-frame checkpoint, then ran 240 frames: the FE8J map profile
+  activated with 82% terrain agreement, a 15x10 map and two standing sprites.
+- Repeated the same checkpoint and frame count with `--no-extensions`: the
+  resulting BMP was byte-identical. This verifies native-frame preservation;
+  the small map has no off-screen terrain, so it is not a large-map test.
+- Navigated the native trade tutorial using normal GBA button input, returned
+  to the map and observed rendering resume. This uses the game's own trade
+  implementation, not the disabled host Armory editor.
+- Verified a short Right press and subsequent release, and rejection of
+  out-of-range/negative/nonnumeric button masks. Serialized `KEYINPUT` is the
+  last value read by the game, so it can lag the frontend's release by a frame.
+- A nonexistent checkpoint destination returned failure rather than reporting
+  a successful capture state.
+- The separate Sacred Evil `BE8J` ROM booted with extensions disabled, as
+  required by the exact-hash gate.
+- Recomputed the original ROM SHA-1 after the tests; it was unchanged.
+
+Large maps, screen-edge panning, physical keyboard/controller interaction and
+mouse pathing have not been separately verified for this profile. This is
+initial rendering support, not a claim that all chapters or Chinese ROM hacks
+are compatible. A later-chapter local save is the next validation input.
+
 ## Reproduce identification on Windows
 
 ```powershell
@@ -84,7 +115,7 @@ For repeatable navigation from a checkpoint, `--press-keys MASK` presses normal
 GBA buttons for the first three frames, then releases them. Masks are A=1, B=2,
 Select=4, Start=8, Right=16, Left=32, Up=64, Down=128, R=256, L=512; combinations
 up to 1023 are allowed. Pair this with `--state`, `--capture`, `--capture-after`
-and `--state-out`. It disables mouse input for that run without saving settings.
+and `--state-out`. A nonzero mask disables mouse input for that run without saving settings.
 This drives mGBA's public input API; it does not patch gameplay RAM or ROM data.
 
 1. Confirm boot and a playable tactical map through ordinary mGBA emulation,
