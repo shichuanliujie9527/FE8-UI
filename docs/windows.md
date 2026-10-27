@@ -101,3 +101,8 @@ Use your own ROM. Give each game its own save and quick-state paths. Press
 **I** for Armory, **F5/F8** to save/load the configured quick state, and **F6**
 to toggle extended rendering. Add `--mute` to disable audio. Run with `--help`
 for the complete command-line options.
+
+ROM and save-state paths may contain Chinese characters and spaces, including
+older PNG-wrapped mGBA states loaded through the compatibility fallback. The
+`state_compat` CTest checks that fallback using a synthetic state at a Unicode
+path; no ROM, BIOS or real save is needed.

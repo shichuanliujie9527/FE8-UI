@@ -7,12 +7,44 @@
 *.o
 *.a
 *.dylib
+*.exe
+*.dll
+*.obj
+*.lib
+*.pdb
+*.ilk
+/vcpkg_installed/
+/dist/
 
 # User-supplied games and runtime data
 *.gba
 *.sav
 *.ss
 *.ss[0-9]
+*.gb
+*.gbc
+*.srm
+*.sa1
+*.sa2
+*.fla
+*.eep
+*.state
+*.state[0-9]*
+*.ss[0-9]*
+*.ss*.png
+*.rtc
+*.bin
+/roms/
+/bios/
+/saves/
+
+# Local credentials
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Tool and editor state
 .DS_Store
