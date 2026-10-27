@@ -1574,7 +1574,7 @@ static int run_game(int argc, char **argv) {
                 core->setKeys(core, keyboard_keys |
                     (options.auto_continue && !large_map_ready ?
                         scripted_continue_keys(frame_count) : 0) |
-                    (frame_count < 3 ? options.press_keys : 0) |
+                    (frame_count <= 3 ? options.press_keys : 0) |
                     fe8_mouse_update(&mouse, &live_state,
                         settings.mouse_enabled && live_state_valid &&
                         visual_profile_active));
