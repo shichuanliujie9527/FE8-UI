@@ -53,8 +53,12 @@ endif()
 
 if(NOT APPLE)
     fe8_add_test(native_frame_presentation test_native_frame_presentation.c
-        ../app/src/display_scaling.c ../app/src/pointer_mapping.c)
+        ../app/src/display_scaling.c ../app/src/pointer_mapping.c
+        ../app/src/lcd_grid.c ../app/src/host_settings.c)
     target_link_libraries(test_native_frame_presentation PRIVATE ${FE8_SDL_TARGET})
+    if(UNIX)
+        target_link_libraries(test_native_frame_presentation PRIVATE m)
+    endif()
 endif()
 
 fe8_add_test(address_space
