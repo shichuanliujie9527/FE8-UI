@@ -62,6 +62,8 @@ typedef struct Fe8Profile {
     const char *profile_name;
     const char *rom_title_match;
     Fe8InventoryLayout inventory;
+    /* Rendering-only profiles must never enable inventory memory writes. */
+    bool map_only;
 } Fe8Profile;
 
 enum {
@@ -173,6 +175,9 @@ bool fe8_detect_retail_fe8u(const Fe8MemoryReader *memory);
 
 /* Header-family check for FE8U hacks; structural validation is still required. */
 bool fe8_detect_fe8u_family(const Fe8MemoryReader *memory);
+
+/* FE8U family, or an exact independently verified non-US ROM profile. */
+bool fe8_detect_supported_rom(const Fe8MemoryReader *memory);
 
 bool fe8_extract_live_state(
     const Fe8MemoryReader *memory,

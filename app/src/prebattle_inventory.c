@@ -124,7 +124,7 @@ bool fe8_prebattle_inventory_active(
 bool fe8_inventory_management_available(
     const Fe8MemoryReader *memory, const Fe8Profile *profile) {
     unsigned index;
-    if (!valid_reader(memory) || !profile ||
+    if (!valid_reader(memory) || !profile || profile->map_only ||
             !valid_range(profile->blue_units, FE8_INVENTORY_UNIT_CAPACITY * FE8_UNIT_SIZE,
                 FE8_EWRAM_START, FE8_EWRAM_END))
         return false;

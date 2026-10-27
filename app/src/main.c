@@ -743,7 +743,9 @@ static int run_game(int argc, char **argv) {
         fprintf(stderr, "Inventory metadata unavailable for this ROM\n");
     render_memory.context = &address_space;
     render_memory.read8 = fe8_address_space_read8;
-    family_match = fe8_detect_fe8u_family(&profile_memory);
+    family_match = fe8_detect_supported_rom(&profile_memory);
+    /* Retain the canonical HUD until the translated layout is validated. */
+    hud_host->enabled = !options.native_ui && !profile->map_only;
     fprintf(stderr, "FE8 extensions: %s\n", family_match && settings.extensions_enabled ? profile->profile_name :
         (!settings.extensions_enabled ? "disabled by settings" : "disabled (unknown ROM)"));
 
@@ -898,7 +900,7 @@ static int run_game(int argc, char **argv) {
                     inventory_ui.active ? FE8_HOST_SHADER_OFF : settings.shader))
                 fprintf(stderr, "Unable to apply shader '%s'\n",
                     fe8_host_shader_name(settings.shader));
-            family_match = fe8_detect_fe8u_family(&profile_memory);
+            family_match = fe8_detect_supported_rom(&profile_memory);
             visual_profile_active = 0;
             fe8_presentation_reset(&presentation);
             frozen_valid = 0;

@@ -43,6 +43,11 @@ foreach(name IN ITEMS fe8_profile archanae_profile)
     target_link_libraries(test_${name} PRIVATE mgba)
 endforeach()
 
+fe8_add_test(fe8j_profile test_fe8j_profile.c
+    ../app/src/address_space.c ../app/src/fe8_profile.c
+    ../app/src/fe8_catalog.c ../app/src/prebattle_inventory.c)
+target_link_libraries(test_fe8j_profile PRIVATE mgba)
+
 foreach(name IN ITEMS
         frame_scheduler extended_map_renderer extended_presentation
         extended_unit_renderer frame_alignment mouse_controller

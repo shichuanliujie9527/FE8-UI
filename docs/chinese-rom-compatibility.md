@@ -1,10 +1,17 @@
 # Chinese ROM compatibility investigation
 
-Status: identification only. No new ROM profile is enabled by this branch.
-These results were obtained by read-only inspection of locally supplied files
-on 2026-10-27, against upstream `ae9d2daf`. No ROM, BIOS, save or game asset is
-included. Booting, extended rendering, Chinese Armory text and inventory writes
-have not yet been validated for these images.
+This branch adds a rendering-only profile for the exact Sacred Stones Chinese
+image with SHA-1 `6643a905be9481c5e1807b2a0198cbb5a8d59398`. Other FE8J images,
+including the Sacred Evil hack below, remain unsupported by the extension.
+Identification was performed on 2026-10-27 against upstream `ae9d2daf`.
+No ROM, BIOS, save or game asset is included.
+
+Boot and a tactical scene were captured locally on Windows after 7,200 frames
+using ordinary A/Start input. The SDL audio pipeline reported nonzero samples.
+This is an automated smoke test, not a human assessment of audio quality or
+a complete playthrough. Extended-map runtime validation is tracked separately
+from this baseline. Chinese Armory decoding and inventory transfers remain
+disabled; the map-only restriction is enforced by the transaction layer too.
 
 | Local image | Header | Size (bytes) | SHA-1 |
 | --- | --- | ---: | --- |
@@ -24,6 +31,33 @@ retail-family detector accepts `BE8E` and uses FE8U memory addresses. Simply
 allowing `BE8J` would not establish that its maps, units, item tables, text
 encoding or convoy match those addresses. FE6/FE7 images need separate game
 support; changing the accepted FE8 header cannot provide it.
+
+## Rendering-only layout
+
+Address candidates were cross-checked against
+[FEBuilderGBA's FE8JP definitions](https://github.com/FEBuilderGBA/FEBuilderGBA/blob/master/FEBuilderGBA/ROMFE8JP.cs)
+and the [FE GBA Function Library](https://github.com/laqieer/FE_GBA_Function_Library),
+including its `symbol files/ghidra/FE8J.txt` and
+`data xref/FE8J_func_ref_data.json`. The supplied ROM's literal pointers were
+then checked locally. No reference implementation or game bytes are copied.
+
+| Structure | FE8J address | Evidence |
+| --- | --- | --- |
+| Battle-map state | `0202BCAC` | `MoveCameraByStepMaybe` references |
+| Chapter state | `0202BCEC` | FEBuilderGBA chapter-data address |
+| Map size and seven map handles | `0202E4D0` through `0202E4EC` | `InitChapterMap` references |
+| Base metatile row pointer literal | `085C2E54` | `SyncTilesFromMapBuffer` literal at `08019730`; points to `02032F88` |
+| Tileset configuration | `02030B88` | `LoadChapterMap` and `UpdateGameTileGfx` references |
+| Blue/red/green units | `0202BE48` / `0202CFB8` / `0202DDC8` | FEBuilderGBA unit-array definitions |
+| Active unit pointer | `03004DF0` | FEBuilderGBA and `SetupActiveUnit` references |
+| Standing sprite list | `0203A014` | `SMS_DisplayAllFromInfoStructs` references |
+
+The profile requires both the `BE8J`/`01` header and the exact file digest.
+The ordinary dimension, pointer, row and canonical-frame visual checks still
+apply every frame. Native HUD relocation, combat-panel backdrop freezing,
+FE8U HP-bar patch probing and inventory editing are disabled for this profile.
+The `fe8j_profile` synthetic test checks identity rejection, map extraction,
+invalid row fallback and both inventory transaction entry points without ROMs.
 
 ## Reproduce identification on Windows
 

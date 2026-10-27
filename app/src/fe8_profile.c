@@ -83,6 +83,7 @@ static const Fe8Profile s_fe8u_profile = {
     FE8_PROFILE_COMMON, FE8_CONVOY_ITEMS,
     "Fire Emblem 8 (FE8U)", "FIREEMBLEM2E",
     FE8_INVENTORY_LAYOUT(FE8_ITEM_TABLE, FE8_GET_CONVOY_ITEMS, 100, 0, 0),
+    false,
 };
 
 static const Fe8Profile s_sacred_echoes_profile = {
@@ -92,6 +93,7 @@ static const Fe8Profile s_sacred_echoes_profile = {
        items. Native inventory management never permits transferring them. */
     FE8_INVENTORY_LAYOUT(FE8_ITEM_TABLE, FE8_GET_CONVOY_ITEMS, 200,
         UINT32_C(0x00000006), 0),
+    false,
 };
 
 static const Fe8Profile s_archanae_profile = {
@@ -99,6 +101,44 @@ static const Fe8Profile s_archanae_profile = {
     "Fire Emblem: Archanae", "FIREEMBLEM2E",
     FE8_INVENTORY_LAYOUT(ARCHANAE_ITEM_TABLE, ARCHANAE_GET_CONVOY_ITEMS, 200, 0,
         ARCHANAE_WEAPON_LOCK_TABLE),
+    false,
+};
+
+/* Wolf/Fire Emblem China translation, exact local image. The Japanese map
+ * layout differs from FE8U; see docs/chinese-rom-compatibility.md for address
+ * evidence and validation. Text/inventory and combat-panel layouts are not
+ * enabled by this rendering-only profile. */
+static const uint8_t s_fe8j_chinese_sha1[FE8_ROM_SHA1_SIZE] = {
+    0x66, 0x43, 0xA9, 0x05, 0xBE, 0x94, 0x81, 0xC5, 0xE1, 0x80,
+    0x7B, 0x2A, 0x01, 0x98, 0xCB, 0xB5, 0xA8, 0xD5, 0x93, 0x98,
+};
+
+static const Fe8Profile s_fe8j_chinese_profile = {
+    .rom_title = FE8_HEADER_TITLE,
+    .rom_game_code = FE8_HEADER_GAME_CODE,
+    .rom_maker_code = FE8_HEADER_MAKER_CODE,
+    .bm_state = 0x0202BCAC,
+    .play_state = 0x0202BCEC,
+    .map_size = 0x0202E4D0,
+    .map_unit = 0x0202E4D4,
+    .map_terrain = 0x0202E4D8,
+    .map_movement = 0x0202E4DC,
+    .map_range = 0x0202E4E0,
+    .map_fog = 0x0202E4E4,
+    .map_hidden = 0x0202E4E8,
+    .map_other = 0x0202E4EC,
+    .map_base_tiles = 0x085C2E54,
+    .tileset_config = 0x02030B88,
+    .blue_units = 0x0202BE48,
+    .red_units = 0x0202CFB8,
+    .green_units = 0x0202DDC8,
+    .active_unit = 0x03004DF0,
+    .sms_handle_array = 0x0203A014,
+    .bg1_tilemap = 0x020234A8,
+    .bg2_tilemap = 0x02023CA8,
+    .profile_name = "Fire Emblem 8 (FE8J Chinese, map only)",
+    .rom_title_match = "FIREEMBLEM8",
+    .map_only = true,
 };
 
 static bool valid_reader(const Fe8MemoryReader *memory) {
@@ -239,10 +279,15 @@ const Fe8Profile *fe8u_profile(void) {
 
 const Fe8Profile *fe8_profile_for_rom(const Fe8MemoryReader *memory) {
     const uint8_t *rom_sha1 = NULL;
+    if (valid_reader(memory) && memory->read8 == fe8_address_space_read8)
+        rom_sha1 = fe8_address_space_rom_sha1(memory->context);
+    if (rom_sha1 &&
+            read_header_bytes(memory, FE8_HEADER_GAME_CODE, "BE8J", 4) &&
+            read_header_bytes(memory, FE8_HEADER_MAKER_CODE, "01", 2) &&
+            memcmp(rom_sha1, s_fe8j_chinese_sha1, sizeof(s_fe8j_chinese_sha1)) == 0)
+        return &s_fe8j_chinese_profile;
     if (!fe8u_family_header(memory))
         return &s_fe8u_profile;
-    if (memory->read8 == fe8_address_space_read8)
-        rom_sha1 = fe8_address_space_rom_sha1(memory->context);
     if (rom_sha1 &&
             memcmp(rom_sha1, s_archanae_sha1, sizeof(s_archanae_sha1)) == 0)
         return &s_archanae_profile;
@@ -254,6 +299,11 @@ const Fe8Profile *fe8_profile_for_rom(const Fe8MemoryReader *memory) {
 
 bool fe8_detect_fe8u_family(const Fe8MemoryReader *memory) {
     return fe8u_family_header(memory);
+}
+
+bool fe8_detect_supported_rom(const Fe8MemoryReader *memory) {
+    return fe8u_family_header(memory) ||
+        fe8_profile_for_rom(memory) == &s_fe8j_chinese_profile;
 }
 
 bool fe8_detect_retail_fe8u(const Fe8MemoryReader *memory) {
@@ -451,7 +501,7 @@ bool fe8_extract_snapshot(
     if (!snapshot || !fe8_extract_live_state(memory, profile, &live))
         return false;
     memset(snapshot, 0, sizeof(*snapshot));
-    if (map_hp_bar_patch_present(memory))
+    if (!profile->map_only && map_hp_bar_patch_present(memory))
         snapshot->flags |= FE8_SNAPSHOT_HP_BARS;
     width = live.map_width;
     height = live.map_height;
