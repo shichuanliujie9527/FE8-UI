@@ -79,3 +79,17 @@ test_lcd_presentation.exe private-input.bmp private-lcd-3x.bmp
 This optional test utility produces a 3x output at default brightness. Keep
 ROM-derived inputs and captures local; they are not CI fixtures or repository
 assets. CI needs no ROM, BIOS, save or game screenshot.
+
+Validated implementation commit `3578d1f7` on 2026-10-27:
+
+- [Windows build](https://github.com/shichuanliujie9527/FE8-UI/actions/runs/40476355133):
+  all 36 tests passed, including both LCD tests and the isolated native menu test.
+- [Linux build](https://github.com/shichuanliujie9527/FE8-UI/actions/runs/40476355192)
+  and [macOS regression](https://github.com/shichuanliujie9527/FE8-UI/actions/runs/40476355152)
+  passed.
+- Local Windows run loaded a private checkpoint and presented 60 frames with
+  `--lcd --lcd-brightness 4` without a rendering error. This branch alone has
+  no Chinese ROM profile; the separate combined playtest branch supplies it.
+- The diagnostic renderer passed locally and produced a 3x LCD rendering of a
+  private map capture. Visual inspection confirmed the RGB pixel lattice. The
+  capture and ROM remain local, and an iOS side-by-side comparison remains open.
