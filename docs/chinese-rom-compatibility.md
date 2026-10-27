@@ -1,5 +1,9 @@
 # Chinese ROM compatibility investigation
 
+Further development is maintained in `pr/rom-profile-registry` and
+[upstream PR #24](https://github.com/stephenjayakar/FE8-UI/pull/24).
+This branch preserves the earlier implementation and validation history.
+
 This branch adds a rendering-only profile for the exact Sacred Stones Chinese
 image with SHA-1 `6643a905be9481c5e1807b2a0198cbb5a8d59398`. Other FE8J images,
 including the Sacred Evil hack below, remain unsupported by the extension.
@@ -15,12 +19,12 @@ disabled; the map-only restriction is enforced by the transaction layer too.
 
 | Local image | Header | Size (bytes) | SHA-1 |
 | --- | --- | ---: | --- |
-| 圣魔之光石 [狼组&火花] | BE8J | 16777216 | `6643a905be9481c5e1807b2a0198cbb5a8d59398` |
-| 圣邪的意志 [火花同人] | BE8J | 16777216 | `5f832ecda378f2dab3b1f877f6ca0a8748487288` |
-| 封印之剑 [狼组&火花] | AFEJ | 8388608 | `8bd4fa755bdebc58cc9ce59ed4e9dbb80ea6d29d` |
-| 烈火之剑 [狼组&火花] | AE7J | 16777216 | `6555bc2623688111cb8e60b105dfb25bf45eff24` |
-| 火焰纹章专属定制无敌版 | AE7E | 31176088 | `d6b883f3ae6fa45803184524d4f508c89248422e` |
-| 艾格辛里的哲学完结版 (2024.11.21) | AFEJ | 31130836 | `27f22f2fc0d47b99203808827e739b9e2c9ef50e` |
+| The Sacred Stones (Wolf/Fire Emblem China translation) | BE8J | 16777216 | `6643a905be9481c5e1807b2a0198cbb5a8d59398` |
+| Sacred Evil (Chinese fan hack) | BE8J | 16777216 | `5f832ecda378f2dab3b1f877f6ca0a8748487288` |
+| The Binding Blade (Wolf/Fire Emblem China translation) | AFEJ | 8388608 | `8bd4fa755bdebc58cc9ce59ed4e9dbb80ea6d29d` |
+| The Blazing Blade (Wolf/Fire Emblem China translation) | AE7J | 16777216 | `6555bc2623688111cb8e60b105dfb25bf45eff24` |
+| Custom invincible FE7 hack | AE7E | 31176088 | `d6b883f3ae6fa45803184524d4f508c89248422e` |
+| Aigexinli philosophy fan hack (2024-11-21 label) | AFEJ | 31130836 | `27f22f2fc0d47b99203808827e739b9e2c9ef50e` |
 
 Filenames are labels supplied locally, not verified patch version numbers.
 Headers indicate the apparent base game; hacks can retain or alter them.
