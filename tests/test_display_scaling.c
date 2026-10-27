@@ -42,5 +42,11 @@ int main(void) {
     assert(scaling.canvas_width == old_width && scaling.canvas_height == old_height);
     assert(scaling.zoom_factor == zoom);
     puts("display scaling tests passed");
+    fe8_display_scaling_init(&scaling, 480, 320, 240, 160);
+    fe8_display_scaling_resize(&scaling, 960, 640);
+    for (int i = 0; i < 100; ++i) {
+        fe8_display_scaling_adjust(&scaling, 1, .005);
+        assert(scaling.canvas_width * 2 == scaling.canvas_height * 3);
+    }
     return 0;
 }

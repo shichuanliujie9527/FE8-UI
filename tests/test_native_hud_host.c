@@ -60,6 +60,13 @@ int main(void) {
     host->overlay.pixels=NULL;
     fe8_hud_host_pointer(host,&video,300,300);
     assert(!host->pixels[200*960+200]&&host->pixels[600*960+600]);
+    video.source_rect=(SDL_Rect){120,80,240,160};
+    host->overlay.pixels=NULL;
+    fe8_hud_host_pointer(host,&video,120,80);
+    assert(host->pixels[0]); /* cropped frame's top-left maps to window top-left */
+    host->overlay.pixels=NULL;
+    fe8_hud_host_pointer(host,&video,240,160);
+    assert(host->pixels[320*960+480]);
     fe8_hud_host_deinit(host);assert(!host->pixels&&!host->overlay.pixels);free(host);
     puts("HUD zoom-independent hit testing, rebinding, scale shortcuts, capture, cursor clipping and pointer overlay passed");
     return 0;

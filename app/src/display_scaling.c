@@ -38,6 +38,14 @@ static int calculate_layout(Fe8DisplayScaling *scaling) {
         scaling->drawable_width / scaling->pixel_scale + 0.999999);
     scaling->canvas_height = (int)(
         scaling->drawable_height / scaling->pixel_scale + 0.999999);
+    /* Keep a 3:2 drawable exactly filled at fractional map zoom as well.
+     * Independent rounding of width/height otherwise leaves a one-pixel strip. */
+    if ((long long)scaling->drawable_width * 2 == (long long)scaling->drawable_height * 3) {
+        int units = (scaling->canvas_width + 2) / 3;
+        if (units < (scaling->canvas_height + 1) / 2) units = (scaling->canvas_height + 1) / 2;
+        scaling->canvas_width = units * 3;
+        scaling->canvas_height = units * 2;
+    }
     return scaling->canvas_width != old_width || scaling->canvas_height != old_height;
 }
 

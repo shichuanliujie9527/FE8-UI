@@ -1794,6 +1794,23 @@ static int run_game(int argc, char **argv) {
          * panned. Outside a validated map, retain the normal centered frame. */
         frame_placement = fe8_presentation_frame_placement(
             extension_active != 0, canvas_width, canvas_height, frame_placement);
+#ifndef __APPLE__
+        int native_only = !extension_active ||
+            (snapshot_valid && snapshot.map_width <= 15 && snapshot.map_height <= 10);
+        if (!fe8_host_video_set_native_frame(&video, native_only && !inventory_ui.active,
+                frame_placement.x, frame_placement.y)) {
+            fprintf(stderr, "Unable to fit native frame: %s\n", SDL_GetError());
+            running = 0;
+            break;
+        }
+        /* Re-evaluate the cursor with this frame's crop after mode transitions. */
+        {
+            int wx, wy; SDL_GetMouseState(&wx, &wy);
+            host_pointer_visible = SDL_GetMouseFocus() == video.window &&
+                fe8_host_video_window_to_canvas(&video, wx, wy,
+                    &host_pointer_canvas_x, &host_pointer_canvas_y);
+        }
+#endif
         const Fe8HostPixel *map_frame = fe8_hud_host_update(hud_host, &video,
             &render_memory, &snapshot, host_frame,
             snapshot_valid && visual_profile_active && !inventory_ui.active,

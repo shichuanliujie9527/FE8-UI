@@ -37,3 +37,11 @@ jobs:
           path: build-windows/dist/
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload native frame diagnostic renderer
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-frame-diagnostic-windows-x64
+          path: build-windows/tests/Release/test_native_frame_presentation.exe
+          if-no-files-found: error
+          retention-days: 14

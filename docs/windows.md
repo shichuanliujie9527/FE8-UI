@@ -1,5 +1,32 @@
 # Windows builds
 
+## Game window and native-frame fitting
+
+The game client area keeps the GBA's 3:2 aspect ratio when resized, snapped or
+maximised. Maximise selects the largest 3:2 window that fits the monitor work
+area instead of filling a differently shaped screen with letterboxing. Startup
+uses a regular window. The ROM library is not subject to this game-window rule.
+
+When extended rendering is unavailable (titles, menus, combat transitions,
+unsupported ROMs, or extensions disabled), only the authoritative 240x160 frame
+is presented, filling that window. A map of at most 15x10 tiles also uses this
+view because its entire map already fits in the native frame. Larger extended
+scenes and native Armory retain their full canvas. No native game pixels are
+cropped or stretched; dark pixels drawn by the game itself remain unchanged.
+
+The internal map canvas is preserved so a display-mode change does not discard
+map caches or change emulation. Pointer coordinates and native cursor/HUD
+placement use the same presentation crop. This change targets SDL presentation
+and Windows window management; macOS retains its existing presentation.
+
+Tests cover the filled native rectangle, full-map restoration, scaled pointer
+mapping, cursor overlays, fractional zoom and hidden Win32 resize/maximise
+geometry. The diagnostic utility accepts a private raw canvas capture:
+
+`test_native_frame_presentation.exe input.bmp fitted.bmp`
+
+Keep ROM-derived captures local, like the ROM and its saves.
+
 The Windows x64 version uses the SDL2 game window and FreeType inventory UI.
 Double-click the executable to open the Windows ROM library. Native Windows
 menus provide settings, save states, and Armory access. OpenGL shader presets

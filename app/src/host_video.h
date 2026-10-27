@@ -22,7 +22,17 @@ typedef struct Fe8HostVideo {
     Fe8DisplayScaling scaling;
     int vsync_active;
     enum Fe8HostShader shader;
+    SDL_Rect source_rect; /* Zero size means the full canvas. SDL presentation crop. */
 } Fe8HostVideo;
+
+static inline SDL_Rect fe8_host_video_source(const Fe8HostVideo *video) {
+    if (video->source_rect.w > 0 && video->source_rect.h > 0) return video->source_rect;
+    return (SDL_Rect){0, 0, video->canvas_width, video->canvas_height};
+}
+
+/* Select only the authoritative 240x160 frame when no extended scene is visible.
+ * This changes presentation and input transforms, not the emulation/map canvas. */
+int fe8_host_video_set_native_frame(Fe8HostVideo *video, int enabled, int x, int y);
 
 int fe8_host_video_init(Fe8HostVideo *video, const char *title,
     int canvas_width, int canvas_height, int vsync_enabled);
