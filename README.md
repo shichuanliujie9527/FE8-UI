@@ -11,6 +11,7 @@ A big criticism I had of playing romhacks of FE8 was that they
 This project aims at fixing that. However, it requires small patches per romhack. The only ones I've tested myself are Sacred Echoes, Sacred Stones, and Archanae. Feel free to open issues for other ones.
 
 # Features
+* Optional LCD pixel grid on Windows/SDL, using the RetroArch lcd3x formula, with a persistent switch and brightness control. [Reference and usage](docs/lcd3x.md).
 * Extended renderer - make sure to enable this in settings
 * Mouse controls - only works when extended renderer is on. Only works for unit movement
 * Inventory editor - Press `I`. This allows you to more easily swap units' stuff. Note that you can cheat with this, since it works all the time (even in combat!). Do with that as you wish.

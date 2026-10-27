@@ -22,6 +22,17 @@ function(fe8_add_test name)
     add_test(NAME ${name} COMMAND test_${name})
 endfunction()
 
+if(NOT APPLE)
+    fe8_add_test(lcd_grid test_lcd_grid.c ../app/src/lcd_grid.c)
+    fe8_add_test(lcd_presentation test_lcd_presentation.c ../app/src/lcd_grid.c
+        ../app/src/host_settings.c ../app/src/display_scaling.c ../app/src/pointer_mapping.c)
+    target_link_libraries(test_lcd_presentation PRIVATE ${FE8_SDL_TARGET})
+    if(UNIX)
+        target_link_libraries(test_lcd_grid PRIVATE m)
+        target_link_libraries(test_lcd_presentation PRIVATE m)
+    endif()
+endif()
+
 if(WIN32)
     fe8_add_test(windows_launcher test_windows_launcher.c ../app/src/windows_launcher.c)
     target_link_libraries(test_windows_launcher PRIVATE mgba ${FE8_SDL_TARGET} comdlg32)
