@@ -22,25 +22,26 @@ typedef struct Fe8HostVideoSdl {
 
 static int present_lcd(Fe8HostVideo *video, Fe8HostVideoSdl *backend,
         const Fe8HostSettings *settings) {
+    SDL_Rect source = fe8_host_video_source(video);
     int output_width, output_height;
     if (SDL_GetRendererOutputSize(backend->renderer, &output_width, &output_height) != 0)
         return 0;
     int width = output_width, height = output_height;
-    if ((int64_t)width * video->canvas_height > (int64_t)height * video->canvas_width)
-        width = (int)((int64_t)height * video->canvas_width / video->canvas_height);
+    if ((int64_t)width * source.h > (int64_t)height * source.w)
+        width = (int)((int64_t)height * source.w / source.h);
     else
-        height = (int)((int64_t)width * video->canvas_height / video->canvas_width);
+        height = (int)((int64_t)width * source.h / source.w);
     if (width <= 0 || height <= 0 || (size_t)height > SIZE_MAX / 4 / (size_t)width)
         return 0;
     if (!backend->lcd_mask || backend->lcd_width != width || backend->lcd_height != height ||
-            backend->lcd_source_width != video->canvas_width ||
-            backend->lcd_source_height != video->canvas_height ||
+            backend->lcd_source_width != source.w ||
+            backend->lcd_source_height != source.h ||
             backend->lcd_brightness != settings->lcd_brightness ||
             backend->lcd_row_brightness != settings->lcd_row_brightness ||
             backend->lcd_gamma != settings->lcd_gamma) {
         uint32_t *pixels = malloc((size_t)width * height * sizeof(*pixels));
         if (!pixels) return 0;
-        int made = fe8_lcd_grid(pixels, width, height, video->canvas_width, video->canvas_height,
+        int made = fe8_lcd_grid(pixels, width, height, source.w, source.h,
             settings->lcd_brightness / 10.0f, settings->lcd_row_brightness / 10.0f);
         if (made && settings->lcd_gamma != 100)
             fe8_lcd_apply_gamma(pixels, pixels, (size_t)width * height, backend->gamma_lut);
@@ -54,8 +55,8 @@ static int present_lcd(Fe8HostVideo *video, Fe8HostVideoSdl *backend,
         SDL_DestroyTexture(backend->lcd_mask);
         backend->lcd_mask = mask;
         backend->lcd_width = width; backend->lcd_height = height;
-        backend->lcd_source_width = video->canvas_width;
-        backend->lcd_source_height = video->canvas_height;
+        backend->lcd_source_width = source.w;
+        backend->lcd_source_height = source.h;
         backend->lcd_brightness = settings->lcd_brightness;
         backend->lcd_row_brightness = settings->lcd_row_brightness;
         backend->lcd_gamma = settings->lcd_gamma;
@@ -66,10 +67,23 @@ static int present_lcd(Fe8HostVideo *video, Fe8HostVideoSdl *backend,
     int ok = SDL_RenderSetLogicalSize(backend->renderer, 0, 0) == 0 &&
         SDL_RenderSetViewport(backend->renderer, NULL) == 0 &&
         SDL_RenderSetScale(backend->renderer, 1, 1) == 0 &&
-        SDL_RenderCopy(backend->renderer, backend->texture, NULL, &area) == 0 &&
+        SDL_RenderCopy(backend->renderer, backend->texture, &source, &area) == 0 &&
         SDL_RenderCopy(backend->renderer, backend->lcd_mask, NULL, &area) == 0;
-    int restored = SDL_RenderSetLogicalSize(backend->renderer, video->canvas_width, video->canvas_height);
+    int restored = SDL_RenderSetLogicalSize(backend->renderer, source.w, source.h);
     return ok && restored == 0;
+}
+
+int fe8_host_video_set_native_frame(Fe8HostVideo *video, int enabled, int x, int y) {
+    Fe8HostVideoSdl *backend = video ? video->backend : NULL;
+    if (!backend) return 0;
+    SDL_Rect source = enabled ? (SDL_Rect){x, y, 240, 160} : (SDL_Rect){0};
+    if (enabled && (x < 0 || y < 0 || x + 240 > video->canvas_width ||
+            y + 160 > video->canvas_height)) return 0;
+    if (video->source_rect.x == source.x && video->source_rect.y == source.y &&
+            video->source_rect.w == source.w && video->source_rect.h == source.h) return 1;
+    video->source_rect = source;
+    source = fe8_host_video_source(video);
+    return SDL_RenderSetLogicalSize(backend->renderer, source.w, source.h) == 0;
 }
 
 static int apply_layout(Fe8HostVideo *video, Fe8HostVideoSdl *backend) {
@@ -83,8 +97,13 @@ static int apply_layout(Fe8HostVideo *video, Fe8HostVideoSdl *backend) {
     backend->texture = texture;
     video->canvas_width = video->scaling.canvas_width;
     video->canvas_height = video->scaling.canvas_height;
+    if (video->source_rect.w) {
+        video->source_rect.x = (video->canvas_width - 240) / 2;
+        video->source_rect.y = (video->canvas_height - 160) / 2;
+    }
+    SDL_Rect source = fe8_host_video_source(video);
     return SDL_RenderSetLogicalSize(backend->renderer,
-        video->canvas_width, video->canvas_height) == 0;
+        source.w, source.h) == 0;
 }
 
 int fe8_host_video_init(Fe8HostVideo *video, const char *title,
@@ -93,7 +112,7 @@ int fe8_host_video_init(Fe8HostVideo *video, const char *title,
     memset(video, 0, sizeof(*video));
     video->window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED, canvas_width * 2, canvas_height * 2,
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_MAXIMIZED);
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     backend = calloc(1, sizeof(*backend));
     if (!video->window || !backend)
         return 0;
@@ -164,9 +183,10 @@ int fe8_host_video_present(Fe8HostVideo *video, const void *pixels,
         return 0;
     SDL_SetRenderDrawColor(backend->renderer, 8, 10, 12, 255);
     SDL_RenderClear(backend->renderer);
+    SDL_Rect source = fe8_host_video_source(video);
     if (lcd_active) {
         if (!present_lcd(video, backend, settings)) return 0;
-    } else if (SDL_RenderCopy(backend->renderer, backend->texture, NULL, NULL) != 0)
+    } else if (SDL_RenderCopy(backend->renderer, backend->texture, &source, NULL) != 0)
         return 0;
     if (overlay && overlay->pixels) {
         if (!backend->overlay || backend->overlay_width != overlay->width ||
@@ -187,7 +207,7 @@ int fe8_host_video_present(Fe8HostVideo *video, const void *pixels,
         SDL_RenderSetViewport(backend->renderer, NULL);
         SDL_RenderSetScale(backend->renderer, 1, 1);
         int drawn = SDL_RenderCopy(backend->renderer, backend->overlay, NULL, NULL);
-        int restored = SDL_RenderSetLogicalSize(backend->renderer, video->canvas_width, video->canvas_height);
+        int restored = SDL_RenderSetLogicalSize(backend->renderer, source.w, source.h);
         if (drawn != 0 || restored != 0) return 0;
     }
     SDL_RenderPresent(backend->renderer);
@@ -205,9 +225,12 @@ int fe8_host_video_window_to_canvas(const Fe8HostVideo *video,
         return 0;
     SDL_GetWindowSize(video->window, &window_width, &window_height);
     SDL_GetRendererOutputSize(backend->renderer, &output_width, &output_height);
-    return fe8_pointer_window_to_canvas(window_width, window_height,
-        output_width, output_height, video->canvas_width, video->canvas_height,
-        window_x, window_y, canvas_x, canvas_y);
+    SDL_Rect source = fe8_host_video_source(video);
+    if (!fe8_pointer_window_to_canvas(window_width, window_height,
+        output_width, output_height, source.w, source.h,
+        window_x, window_y, canvas_x, canvas_y)) return 0;
+    *canvas_x += source.x; *canvas_y += source.y;
+    return 1;
 }
 
 int fe8_host_video_event_to_canvas(const Fe8HostVideo *video,
@@ -215,12 +238,12 @@ int fe8_host_video_event_to_canvas(const Fe8HostVideo *video,
     /* The SDL renderer's event filter has already mapped these coordinates
        to its logical canvas. Applying window scaling again shifts clicks
        away from the hovered label after a resize or density change. */
-    if (!video || !video->backend || !canvas_x || !canvas_y ||
-            event_x < 0 || event_y < 0 ||
-            event_x >= video->canvas_width || event_y >= video->canvas_height)
+    if (!video || !video->backend || !canvas_x || !canvas_y) return 0;
+    SDL_Rect source = fe8_host_video_source(video);
+    if (event_x < 0 || event_y < 0 || event_x >= source.w || event_y >= source.h)
         return 0;
-    *canvas_x = event_x;
-    *canvas_y = event_y;
+    *canvas_x = event_x + source.x;
+    *canvas_y = event_y + source.y;
     return 1;
 }
 

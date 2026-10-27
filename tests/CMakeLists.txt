@@ -38,11 +38,22 @@ endif()
 
 if(WIN32)
     fe8_add_test(windows_launcher test_windows_launcher.c ../app/src/windows_launcher.c)
+    fe8_add_test(windows_aspect test_windows_aspect.c ../app/src/windows_aspect.c)
     target_link_libraries(test_windows_launcher PRIVATE mgba ${FE8_SDL_TARGET} comdlg32)
     fe8_add_test(windows_desktop test_windows_desktop.c
-        ../app/src/windows_settings.c ../app/src/windows_launcher.c ../app/src/host_settings.c)
+        ../app/src/windows_settings.c ../app/src/windows_aspect.c ../app/src/windows_launcher.c ../app/src/host_settings.c)
     target_link_libraries(test_windows_desktop PRIVATE mgba ${FE8_SDL_TARGET} comdlg32 comctl32)
     set_tests_properties(windows_desktop PROPERTIES TIMEOUT 20)
+endif()
+
+if(NOT APPLE)
+    fe8_add_test(native_frame_presentation test_native_frame_presentation.c
+        ../app/src/display_scaling.c ../app/src/pointer_mapping.c
+        ../app/src/lcd_grid.c ../app/src/host_settings.c)
+    target_link_libraries(test_native_frame_presentation PRIVATE ${FE8_SDL_TARGET})
+    if(UNIX)
+        target_link_libraries(test_native_frame_presentation PRIVATE m)
+    endif()
 endif()
 
 fe8_add_test(address_space
