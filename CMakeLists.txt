@@ -123,6 +123,7 @@ else()
     target_link_libraries(fe8-mgba-sdl PRIVATE fe8_desktop_text)
     target_sources(fe8-mgba-sdl PRIVATE
         app/src/host_video_sdl.c
+        app/src/lcd_grid.c
         app/src/macos_library_stub.c)
     if(WIN32)
         target_sources(fe8-mgba-sdl PRIVATE app/src/windows_settings.c app/src/windows_library.c)
@@ -138,6 +139,9 @@ target_include_directories(fe8-mgba-sdl PRIVATE app/src)
 target_compile_definitions(fe8-mgba-sdl PRIVATE
     $<TARGET_PROPERTY:mgba,COMPILE_DEFINITIONS>)
 target_link_libraries(fe8-mgba-sdl PRIVATE mgba ZLIB::ZLIB ${FE8_SDL_MAIN_TARGET} ${FE8_SDL_TARGET})
+if(UNIX AND NOT APPLE)
+    target_link_libraries(fe8-mgba-sdl PRIVATE m)
+endif()
 
 if(APPLE AND NOT CMAKE_OSX_ARCHITECTURES)
     # Homebrew's native arm64 SDL2 and the host compiler are the default on
@@ -162,7 +166,7 @@ endif()
 if(WIN32)
     target_sources(fe8-mgba-sdl PRIVATE app/src/windows_launcher.c)
     target_link_libraries(fe8-mgba-sdl PRIVATE comdlg32)
-    install(FILES LICENSE THIRD_PARTY_NOTICES.md docs/windows.md DESTINATION .)
+    install(FILES LICENSE THIRD_PARTY_NOTICES.md docs/windows.md docs/lcd3x.md DESTINATION .)
     install(FILES third_party/mgba/LICENSE DESTINATION licenses/mgba)
     install(FILES docs/mgba-source.md DESTINATION licenses/mgba)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/mgba-compat/unlicensed.c"

@@ -4,6 +4,14 @@ The MIT license in [`LICENSE`](LICENSE) covers the original FE8 Extended
 Frontend code in this repository. It does not relicense third-party projects,
 ROMs, game assets, or trademarks.
 
+## lcd3x LCD pixel grid
+
+The SDL LCD mask formula in `app/src/lcd_grid.c` is adapted from Gigaherz's
+`handheld/shaders/lcd3x.slang` in
+[libretro/slang-shaders](https://github.com/libretro/slang-shaders/blob/master/handheld/shaders/lcd3x.slang).
+The author declares that shader to be in the public domain. See
+[the integration notes](docs/lcd3x.md) for the preset and rendering differences.
+
 ## mGBA
 
 The application builds and statically links the pinned
