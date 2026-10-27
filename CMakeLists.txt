@@ -51,6 +51,7 @@ endif()
 
 add_executable(fe8-mgba-sdl
     app/src/main.c
+    app/src/state_compat.c
     app/src/native_hud.c
     app/src/native_hud_host.c
     app/src/address_space.c

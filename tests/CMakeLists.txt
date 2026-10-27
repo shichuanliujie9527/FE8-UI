@@ -22,6 +22,9 @@ function(fe8_add_test name)
     add_test(NAME ${name} COMMAND test_${name})
 endfunction()
 
+fe8_add_test(state_compat test_state_compat.c ../app/src/state_compat.c)
+target_link_libraries(test_state_compat PRIVATE mgba ZLIB::ZLIB)
+
 if(WIN32)
     fe8_add_test(windows_launcher test_windows_launcher.c ../app/src/windows_launcher.c)
     target_link_libraries(test_windows_launcher PRIVATE mgba ${FE8_SDL_TARGET} comdlg32)

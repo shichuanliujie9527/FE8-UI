@@ -41,7 +41,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zlib.h>
+#include "state_compat.h"
 
 enum {
     GBA_WIDTH = 240,
@@ -358,37 +358,7 @@ static int load_state(struct mCore *core, const char *path) {
     success = mCoreLoadStateNamed(core, state, SAVESTATE_ALL);
     state->close(state);
     if (!success) {
-        FILE *png = fopen(path, "rb");
-        static const uint8_t signature[8] = {137, 80, 78, 71, 13, 10, 26, 10};
-        uint8_t header[8];
-        success = 0;
-        if (png && fread(header, 1, sizeof(header), png) == sizeof(header) &&
-                memcmp(header, signature, sizeof(signature)) == 0) {
-            while (fread(header, 1, sizeof(header), png) == sizeof(header)) {
-                uint32_t length = ((uint32_t)header[0] << 24) |
-                    ((uint32_t)header[1] << 16) | ((uint32_t)header[2] << 8) | header[3];
-                if (length > UINT32_C(16) * 1024 * 1024)
-                    break;
-                if (memcmp(header + 4, "gbAs", 4) == 0) {
-                    uint8_t *compressed = malloc(length);
-                    size_t state_size = core->stateSize(core);
-                    uint8_t *raw = malloc(state_size);
-                    uLongf raw_size = state_size;
-                    if (compressed && raw && fread(compressed, 1, length, png) == length &&
-                            uncompress(raw, &raw_size, compressed, length) == Z_OK &&
-                            raw_size == state_size) {
-                        success = core->loadState(core, raw);
-                    }
-                    free(raw);
-                    free(compressed);
-                    break;
-                }
-                if (fseek(png, (long)length + 4, SEEK_CUR) != 0)
-                    break;
-            }
-        }
-        if (png)
-            fclose(png);
+        success = fe8_load_png_state(core, path);
         if (success)
             fprintf(stderr, "Loaded compatible gbAs core payload from '%s'\n", path);
         else
