@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "windows_desktop.h"
+#include "windows_aspect.h"
 #include "macos_settings.h"
 
 static const wchar_t *settings_key = L"Software\\FE8 Extended Frontend";
@@ -272,6 +273,7 @@ int fe8_windows_menu_command(HWND window, unsigned command, Fe8HostSettings *s) 
 }
 static LRESULT CALLBACK game_proc(HWND window, UINT message, WPARAM wp, LPARAM lp, UINT_PTR id, DWORD_PTR data) {
     (void)data;
+    if (fe8_windows_game_aspect_message(window, message, wp, lp)) return message == WM_SIZING ? TRUE : 0;
     if (message == WM_INITMENUPOPUP) fe8_windows_update_menu(window, game_settings);
     if (message == WM_COMMAND && game_settings && fe8_windows_menu_command(window, LOWORD(wp), game_settings)) return 0;
     if (message == WM_NCDESTROY) {
@@ -289,4 +291,5 @@ void fe8_windows_attach_menu(SDL_Window *window) {
     fe8_windows_update_menu(native, game_settings);
     DrawMenuBar(native);
     SetWindowPos(native, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    fe8_windows_fit_game_window(native);
 }
