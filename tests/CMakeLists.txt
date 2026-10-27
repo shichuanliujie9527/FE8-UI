@@ -35,6 +35,12 @@ if(NOT APPLE)
         target_link_libraries(test_lcd_presentation PRIVATE m)
     endif()
 endif()
+fe8_add_test(native_trade test_native_trade.c ../app/src/native_trade.c)
+add_executable(test_native_trade_rom test_native_trade_rom.c ../app/src/native_trade.c
+    ../app/src/fe8_profile.c ../app/src/address_space.c)
+target_include_directories(test_native_trade_rom PRIVATE ../app/src)
+target_compile_definitions(test_native_trade_rom PRIVATE $<TARGET_PROPERTY:mgba,COMPILE_DEFINITIONS>)
+target_link_libraries(test_native_trade_rom PRIVATE mgba)
 
 if(WIN32)
     fe8_add_test(windows_launcher test_windows_launcher.c ../app/src/windows_launcher.c)

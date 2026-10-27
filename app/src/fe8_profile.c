@@ -139,6 +139,10 @@ static const Fe8Profile s_fe8j_chinese_profile = {
     .profile_name = "Fire Emblem 8 (FE8J Chinese, map only)",
     .rom_title_match = "FIREEMBLEM8",
     .map_only = true,
+    .trade_proc_pointer = 0x0203A60C,
+    .trade_script = 0x085C3FFC,
+    .trade_idle_unselected = 0x0802D76D,
+    .trade_idle_selected = 0x0802D8B9,
 };
 
 static bool valid_reader(const Fe8MemoryReader *memory) {

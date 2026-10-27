@@ -13,6 +13,7 @@ This project aims at fixing that. However, it requires small patches per romhack
 # Features
 * Optional LCD pixel grid on Windows/SDL, using the RetroArch lcd3x formula, with a persistent switch and brightness control. [Reference and usage](docs/lcd3x.md).
 * Windows game windows keep a 3:2 client area. Native scenes and maps that fit in one GBA screen fill the window, without the extended canvas's dark padding.
+* Mouse item selection in the native trade menu for the exact supported Chinese FE8J ROM, using ordinary game inputs. [Behaviour and scope](docs/native-trade-mouse.md).
 * Extended renderer - make sure to enable this in settings
 * Mouse controls - only works when extended renderer is on. Only works for unit movement
 * Inventory editor - Press `I`. This allows you to more easily swap units' stuff. Note that you can cheat with this, since it works all the time (even in combat!). Do with that as you wish.
