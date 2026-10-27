@@ -1,5 +1,6 @@
 #include "host_video.h"
 #include "pointer_mapping.h"
+#include "lcd_grid.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +11,67 @@ typedef struct Fe8HostVideoSdl {
     SDL_Texture *texture;
     SDL_Texture *overlay;
     int overlay_width, overlay_height;
+    SDL_Texture *lcd_mask;
+    int lcd_width, lcd_height, lcd_source_width, lcd_source_height;
+    int lcd_brightness, lcd_row_brightness;
+    int lcd_gamma, lut_gamma;
+    uint8_t gamma_lut[256];
+    uint32_t *gamma_pixels;
+    size_t gamma_capacity;
 } Fe8HostVideoSdl;
+
+static int present_lcd(Fe8HostVideo *video, Fe8HostVideoSdl *backend,
+        const Fe8HostSettings *settings) {
+    SDL_Rect source = fe8_host_video_source(video);
+    int output_width, output_height;
+    if (SDL_GetRendererOutputSize(backend->renderer, &output_width, &output_height) != 0)
+        return 0;
+    int width = output_width, height = output_height;
+    if ((int64_t)width * source.h > (int64_t)height * source.w)
+        width = (int)((int64_t)height * source.w / source.h);
+    else
+        height = (int)((int64_t)width * source.h / source.w);
+    if (width <= 0 || height <= 0 || (size_t)height > SIZE_MAX / 4 / (size_t)width)
+        return 0;
+    if (!backend->lcd_mask || backend->lcd_width != width || backend->lcd_height != height ||
+            backend->lcd_source_width != source.w ||
+            backend->lcd_source_height != source.h ||
+            backend->lcd_brightness != settings->lcd_brightness ||
+            backend->lcd_row_brightness != settings->lcd_row_brightness ||
+            backend->lcd_gamma != settings->lcd_gamma) {
+        uint32_t *pixels = malloc((size_t)width * height * sizeof(*pixels));
+        if (!pixels) return 0;
+        int made = fe8_lcd_grid(pixels, width, height, source.w, source.h,
+            settings->lcd_brightness / 10.0f, settings->lcd_row_brightness / 10.0f);
+        if (made && settings->lcd_gamma != 100)
+            fe8_lcd_apply_gamma(pixels, pixels, (size_t)width * height, backend->gamma_lut);
+        SDL_Texture *mask = made ? SDL_CreateTexture(backend->renderer,
+            SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, width, height) : NULL;
+        int ok = mask && SDL_UpdateTexture(mask, NULL, pixels, width * 4) == 0 &&
+            SDL_SetTextureBlendMode(mask, SDL_BLENDMODE_MOD) == 0 &&
+            SDL_SetTextureScaleMode(mask, SDL_ScaleModeNearest) == 0;
+        free(pixels);
+        if (!ok) { SDL_DestroyTexture(mask); return 0; }
+        SDL_DestroyTexture(backend->lcd_mask);
+        backend->lcd_mask = mask;
+        backend->lcd_width = width; backend->lcd_height = height;
+        backend->lcd_source_width = source.w;
+        backend->lcd_source_height = source.h;
+        backend->lcd_brightness = settings->lcd_brightness;
+        backend->lcd_row_brightness = settings->lcd_row_brightness;
+        backend->lcd_gamma = settings->lcd_gamma;
+    }
+    SDL_Rect area = {(output_width - width) / 2, (output_height - height) / 2, width, height};
+    /* One mask texel per physical output pixel. Use the exact same rectangle
+     * for source and mask, then restore SDL's mouse-event coordinate filter. */
+    int ok = SDL_RenderSetLogicalSize(backend->renderer, 0, 0) == 0 &&
+        SDL_RenderSetViewport(backend->renderer, NULL) == 0 &&
+        SDL_RenderSetScale(backend->renderer, 1, 1) == 0 &&
+        SDL_RenderCopy(backend->renderer, backend->texture, &source, &area) == 0 &&
+        SDL_RenderCopy(backend->renderer, backend->lcd_mask, NULL, &area) == 0;
+    int restored = SDL_RenderSetLogicalSize(backend->renderer, source.w, source.h);
+    return ok && restored == 0;
+}
 
 int fe8_host_video_set_native_frame(Fe8HostVideo *video, int enabled, int x, int y) {
     Fe8HostVideoSdl *backend = video ? video->backend : NULL;
@@ -97,13 +158,36 @@ int fe8_host_video_present(Fe8HostVideo *video, const void *pixels,
     Fe8HostVideoSdl *backend = video ? video->backend : NULL;
     if (!backend)
         return 0;
+    const Fe8HostSettings *settings = fe8_host_settings_current();
+    int lcd_active = settings && settings->lcd_enabled && !video->scaling.native_resolution;
+    if (lcd_active && settings->lcd_gamma != 100) {
+        /* pow(source * mask, 1/gamma) factorises into two terms. Transform
+         * source with a cached LUT, and transform the cached mask once. This
+         * lifts midtones without an exposure multiplier's highlight clipping. */
+        if (backend->lut_gamma != settings->lcd_gamma || !backend->gamma_pixels) {
+            fe8_lcd_gamma_lut(backend->gamma_lut, settings->lcd_gamma);
+            backend->lut_gamma = settings->lcd_gamma;
+        }
+        size_t count = (size_t)video->canvas_width * video->canvas_height;
+        if (count > SIZE_MAX / sizeof(*backend->gamma_pixels)) return 0;
+        if (count > backend->gamma_capacity) {
+            uint32_t *buffer = realloc(backend->gamma_pixels, count * sizeof(*buffer));
+            if (!buffer) return 0;
+            backend->gamma_pixels = buffer; backend->gamma_capacity = count;
+        }
+        fe8_lcd_apply_gamma(backend->gamma_pixels, pixels, count, backend->gamma_lut);
+        pixels = backend->gamma_pixels;
+    }
     if (SDL_UpdateTexture(backend->texture, NULL, pixels,
             video->canvas_width * 4) != 0)
         return 0;
     SDL_SetRenderDrawColor(backend->renderer, 8, 10, 12, 255);
     SDL_RenderClear(backend->renderer);
     SDL_Rect source = fe8_host_video_source(video);
-    if (SDL_RenderCopy(backend->renderer, backend->texture, &source, NULL) != 0) return 0;
+    if (lcd_active) {
+        if (!present_lcd(video, backend, settings)) return 0;
+    } else if (SDL_RenderCopy(backend->renderer, backend->texture, &source, NULL) != 0)
+        return 0;
     if (overlay && overlay->pixels) {
         if (!backend->overlay || backend->overlay_width != overlay->width ||
                 backend->overlay_height != overlay->height) {
@@ -215,6 +299,11 @@ void fe8_host_video_log_status(const Fe8HostVideo *video) {
     fprintf(stderr, "Display: window=%dx%d output=%dx%d logical=%dx%d scale=%.2fx backend=SDL\n",
         window_width, window_height, output_width, output_height,
         video->canvas_width, video->canvas_height, video->scaling.pixel_scale);
+    const Fe8HostSettings *settings = fe8_host_settings_current();
+    if (settings && settings->lcd_enabled)
+        fprintf(stderr, "LCD: mask=%.1f rows=%.1f gamma=%.2f\n",
+            settings->lcd_brightness / 10.0, settings->lcd_row_brightness / 10.0,
+            settings->lcd_gamma / 100.0);
 }
 
 void fe8_host_video_deinit(Fe8HostVideo *video) {
@@ -224,6 +313,8 @@ void fe8_host_video_deinit(Fe8HostVideo *video) {
     if (backend) {
         SDL_DestroyTexture(backend->texture);
         SDL_DestroyTexture(backend->overlay);
+        SDL_DestroyTexture(backend->lcd_mask);
+        free(backend->gamma_pixels);
         SDL_DestroyRenderer(backend->renderer);
         free(backend);
     }

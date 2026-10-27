@@ -67,6 +67,9 @@ struct fe8_options {
     int realtime;
     int perf_stats;
     int mute;
+    int lcd;
+    int lcd_brightness;
+    int lcd_gamma;
     int open_inventory;
     int native_ui;
     int hud_scale;
@@ -105,6 +108,8 @@ static void usage(const char *program) {
         "       [--auto-continue] [--seek-large-map]\n"
         "       [--state-out MAP_STATE.ss] [--quick-state QUICK_STATE.ss]\n"
         "       [--realtime] [--perf-stats] [--mute] [--inventory]\n"
+        "       [--lcd | --no-lcd] [--lcd-brightness 1..12] (SDL backend)\n"
+        "       [--lcd-gamma 1..2.2] (1 = original, default 1.4)\n"
         "       [--no-extensions] [--native-ui] [--hud-scale 80..200]\n", program);
 }
 
@@ -112,6 +117,7 @@ static int parse_options(int argc, char **argv, struct fe8_options *options) {
     int i;
     memset(options, 0, sizeof(*options));
     options->extensions = 1;
+    options->lcd = -1;
     options->hud_scale = FE8_HUD_DEFAULT_SCALE;
     options->capture_after = 1;
     for (i = 1; i < argc; ++i) {
@@ -165,6 +171,23 @@ static int parse_options(int argc, char **argv, struct fe8_options *options) {
             continue;
         } else if (strcmp(argv[i], "--mute") == 0) {
             options->mute = 1;
+            continue;
+        } else if (strcmp(argv[i], "--lcd") == 0 || strcmp(argv[i], "--no-lcd") == 0) {
+            options->lcd = strcmp(argv[i], "--lcd") == 0;
+            continue;
+        } else if (strcmp(argv[i], "--lcd-gamma") == 0) {
+            char *end;
+            if (++i >= argc) return 0;
+            double value = strtod(argv[i], &end);
+            if (!*argv[i] || *end || !(value >= 1 && value <= 2.2)) return 0;
+            options->lcd_gamma = (int)(value * 100 + .5);
+            continue;
+        } else if (strcmp(argv[i], "--lcd-brightness") == 0) {
+            char *end;
+            if (++i >= argc) return 0;
+            double value = strtod(argv[i], &end);
+            if (!*argv[i] || *end || !(value >= 1 && value <= 12)) return 0;
+            options->lcd_brightness = (int)(value * 10 + .5);
             continue;
         } else if (strcmp(argv[i], "--inventory") == 0) {
             options->open_inventory = 1;
@@ -660,6 +683,9 @@ static int run_game(int argc, char **argv) {
     }
     fe8_host_settings_init(&settings);
     fe8_macos_load_settings(&settings);
+    if (options.lcd >= 0) settings.lcd_enabled = options.lcd;
+    if (options.lcd_brightness) settings.lcd_brightness = options.lcd_brightness;
+    if (options.lcd_gamma) settings.lcd_gamma = options.lcd_gamma;
     if (options.mute)
         settings.audio_enabled = 0;
     fe8_inventory_ui_init(&inventory_ui);

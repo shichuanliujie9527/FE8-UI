@@ -45,3 +45,11 @@ jobs:
           path: build-windows/tests/Release/test_native_frame_presentation.exe
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload ROM-free LCD diagnostic renderer
+        uses: actions/upload-artifact@v4
+        with:
+          name: lcd-diagnostic-windows-x64
+          path: build-windows/tests/Release/test_lcd_presentation.exe
+          if-no-files-found: error
+          retention-days: 14
