@@ -35,6 +35,10 @@ foreach ($file in $files) {
         } finally {
             $hasher.Dispose()
         }
+        if ($code -eq 'BE8J' -and $digest -eq '6643a905be9481c5e1807b2a0198cbb5a8d59398' -and
+                [Text.Encoding]::ASCII.GetString($header, 176, 2) -eq '01') {
+            $family = 'FE8J Chinese; rendering-only profile (inventory disabled)'
+        }
         [PSCustomObject]@{
             Name = $file.Name
             Size = $stream.Length
