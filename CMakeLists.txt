@@ -125,7 +125,7 @@ else()
         app/src/host_video_sdl.c
         app/src/macos_library_stub.c)
     if(WIN32)
-        target_sources(fe8-mgba-sdl PRIVATE app/src/windows_settings.c app/src/windows_library.c)
+        target_sources(fe8-mgba-sdl PRIVATE app/src/windows_settings.c app/src/windows_library.c app/src/windows_aspect.c)
         target_link_libraries(fe8-mgba-sdl PRIVATE comctl32)
     else()
         target_sources(fe8-mgba-sdl PRIVATE app/src/macos_settings_stub.c)

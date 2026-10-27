@@ -8,18 +8,20 @@
 /* Inverse of pointer_mapping's aspect-fit transform. SDL mouse events have
  * already been converted to the logical canvas by the video backend. */
 static Fe8HudRect image_rect(const Fe8HostVideo *video) {
+    SDL_Rect source = fe8_host_video_source(video);
     int w = video->scaling.drawable_width, h = video->scaling.drawable_height;
-    if ((int64_t)w * video->canvas_height > (int64_t)h * video->canvas_width)
-        w = h * video->canvas_width / video->canvas_height;
+    if ((int64_t)w * source.h > (int64_t)h * source.w)
+        w = h * source.w / source.h;
     else
-        h = w * video->canvas_height / video->canvas_width;
+        h = w * source.h / source.w;
     return (Fe8HudRect){(video->scaling.drawable_width - w) / 2,
         (video->scaling.drawable_height - h) / 2, w, h};
 }
 static void canvas_to_output(const Fe8HostVideo *video, int cx, int cy, int *x, int *y) {
     Fe8HudRect r = image_rect(video);
-    *x = r.x + (int)((int64_t)cx * r.width / video->canvas_width);
-    *y = r.y + (int)((int64_t)cy * r.height / video->canvas_height);
+    SDL_Rect source = fe8_host_video_source(video);
+    *x = r.x + (int)((int64_t)(cx - source.x) * r.width / source.w);
+    *y = r.y + (int)((int64_t)(cy - source.y) * r.height / source.h);
 }
 const Fe8HostPixel *fe8_hud_host_update(Fe8HudHost *host,
         const Fe8HostVideo *video, const Fe8MemoryView *memory,
@@ -128,8 +130,11 @@ Fe8HostPixel *fe8_hud_host_capture(const Fe8HudHost *host,
     for (int y = 0; y < h; ++y) for (int x = 0; x < w; ++x) {
         uint32_t background = UINT32_C(0xFF0C0A08);
         if (x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height)
-            background = canvas[(size_t)((y - r.y) * video->canvas_height / r.height) *
-                video->canvas_width + (x - r.x) * video->canvas_width / r.width];
+        {
+            SDL_Rect source = fe8_host_video_source(video);
+            background = canvas[(size_t)(source.y + (y - r.y) * source.h / r.height) *
+                video->canvas_width + source.x + (x - r.x) * source.w / r.width];
+        }
         pixels[(size_t)y * w + x] = fe8_native_hud_over(host->pixels[(size_t)y * w + x], background);
     }
     return pixels;
