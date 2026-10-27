@@ -4,6 +4,7 @@
 
 - [x] Study the official lcd3x preset and its single referenced shader.
 - [x] Implement the RGB LCD grid formula on SDL with a switch and brightness.
+- [x] Add independent gamma compensation for users who find the reference too dark.
 - [x] Cover mask values, actual SDL presentation and Windows preference persistence.
 - [ ] Compare the playable Windows build with the user's preferred iOS appearance.
 

@@ -22,6 +22,8 @@ int main(int argc, char **argv) {
     video.scaling.canvas_width = video.scaling.canvas_height = 4;
     assert(apply_layout(&video, backend));
     Fe8HostSettings settings; fe8_host_settings_init(&settings);
+    assert(settings.lcd_gamma == 140);
+    settings.lcd_gamma = 100; /* Reference shader without compensation. */
     uint32_t source[16]; for (int i = 0; i < 16; ++i) source[i] = 0xFFFFFFFF;
     assert(fe8_host_video_present(&video, source, NULL));
     near_rgb(pixel(surface, 0, 0), 0xFFFFFF);
@@ -35,11 +37,31 @@ int main(int argc, char **argv) {
     assert(cached == backend->lcd_mask);
     int w, h; SDL_RenderGetLogicalSize(backend->renderer, &w, &h);
     assert(w == 4 && h == 4);
+    settings.lcd_gamma = 140;
+    for (int i = 0; i < 16; ++i) source[i] = 0xFF808080;
+    assert(fe8_host_video_present(&video, source, NULL));
+    /* pow((128/255) * (reference mask/255), 1/1.4), within 8-bit rounding. */
+    near_rgb(pixel(surface, 0, 0), 0x6C9090);
+    assert(backend->lcd_gamma == 140);
+    settings.lcd_enabled = 0;
+    assert(fe8_host_video_present(&video, source, NULL));
+    near_rgb(pixel(surface, 0, 0), 0x808080);
+    settings.lcd_enabled = 1;
+    video.scaling.native_resolution = 1;
+    assert(fe8_host_video_present(&video, source, NULL));
+    near_rgb(pixel(surface, 0, 0), 0x808080);
+    video.scaling.native_resolution = 0;
+    settings.lcd_gamma = 100;
+    for (int i = 0; i < 16; ++i) source[i] = 0xFFFFFFFF;
+    assert(fe8_host_video_present(&video, source, NULL));
+    near_rgb(pixel(surface, 0, 0), 0x98E4E4);
+    assert(backend->lcd_gamma == 100);
     uint32_t dark = pixel(surface, 0, 0);
     settings.lcd_brightness = 120;
     assert(fe8_host_video_present(&video, source, NULL));
     assert(backend->lcd_brightness == 120 && (pixel(surface, 0, 0) & 255) > (dark & 255));
     uint32_t overlay_pixels[144] = {0}; overlay_pixels[0] = 0xFF123456;
+    settings.lcd_gamma = 180;
     Fe8VideoOverlay overlay = {overlay_pixels, 12, 12};
     assert(fe8_host_video_present(&video, source, &overlay));
     near_rgb(pixel(surface, 0, 0), 0x123456);
@@ -64,7 +86,7 @@ int main(int argc, char **argv) {
 
     /* Optional local comparison from an original fixture or a private raw
        --capture BMP. Neither input nor output needs to enter the repository. */
-    if (argc == 3) {
+    if (argc == 3 || argc == 4) {
         SDL_Surface *input = SDL_LoadBMP(argv[1]); assert(input);
         SDL_Surface *rgba = SDL_ConvertSurfaceFormat(input, SDL_PIXELFORMAT_RGBA32, 0); assert(rgba);
         surface = SDL_CreateRGBSurfaceWithFormat(0, rgba->w*3, rgba->h*3, 32, SDL_PIXELFORMAT_RGBA32); assert(surface);
@@ -72,6 +94,7 @@ int main(int argc, char **argv) {
         backend->renderer = SDL_CreateSoftwareRenderer(surface); assert(backend->renderer);
         video.scaling.canvas_width = rgba->w; video.scaling.canvas_height = rgba->h;
         assert(apply_layout(&video, backend)); settings.lcd_brightness = 40;
+        settings.lcd_gamma = argc == 4 ? atoi(argv[3]) : 140;
         assert(fe8_host_video_present(&video, rgba->pixels, NULL));
         assert(SDL_SaveBMP(surface, argv[2]) == 0);
         fe8_host_video_deinit(&video); SDL_FreeSurface(surface);

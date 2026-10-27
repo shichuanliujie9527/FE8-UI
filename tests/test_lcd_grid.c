@@ -4,6 +4,18 @@
 #include <string.h>
 
 int main(void) {
+    uint8_t lut[256];
+    fe8_lcd_gamma_lut(lut, 100);
+    for (int i = 0; i < 256; ++i) assert(lut[i] == i);
+    fe8_lcd_gamma_lut(lut, 140);
+    assert(lut[0] == 0 && lut[255] == 255);
+    assert(lut[128] == 156);
+    for (int i = 1; i < 256; ++i) assert(lut[i] >= i && lut[i] >= lut[i-1]);
+    uint32_t colors[] = {0, 0xFFFFFFFF, 0x12808080};
+    fe8_lcd_apply_gamma(colors, colors, 3, lut);
+    assert(colors[0] == 0 && colors[1] == 0xFFFFFFFF && colors[2] == 0x129C9C9C);
+    fe8_lcd_gamma_lut(lut, 999);
+    for (int i = 0; i < 256; ++i) assert(lut[i] == i);
     uint32_t pixels[36], brighter[36], fallback[36];
     /* Independent golden values from lcd3x's default fragment expression,
        sampled at 3x pixel centres. Each triplet is R,G,B, not a grey scanline. */

@@ -4,6 +4,23 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+void fe8_lcd_gamma_lut(uint8_t lut[256], int gamma_percent) {
+    if (gamma_percent < 100 || gamma_percent > 220) gamma_percent = 100;
+    for (int i = 0; i < 256; ++i)
+        lut[i] = gamma_percent == 100 ? (uint8_t)i :
+            (uint8_t)(255 * pow(i / 255.0, 100.0 / gamma_percent) + .5);
+}
+
+void fe8_lcd_apply_gamma(uint32_t *out, const uint32_t *in, size_t count,
+        const uint8_t lut[256]) {
+    for (size_t i = 0; i < count; ++i) {
+        uint32_t p = in[i];
+        out[i] = (p & UINT32_C(0xFF000000)) | lut[p & 255] |
+            ((uint32_t)lut[(p >> 8) & 255] << 8) |
+            ((uint32_t)lut[(p >> 16) & 255] << 16);
+    }
+}
+
 /* Gigaherz's public-domain lcd3x (libretro/slang-shaders): the original
  * two-axis sinusoidal mask, evaluated once per layout/parameter change.
  * SDL multiplies it with the nearest-neighbour game image on the GPU.
