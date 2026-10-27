@@ -73,6 +73,7 @@ typedef struct Fe8HostSettings {
     /* lcd3x parameters in tenths: LCD 1..12, rows 1..32. SDL backend. */
     int lcd_brightness;
     int lcd_row_brightness;
+    int lcd_gamma; /* Brightness compensation: 100..220, 100 = original. */
     enum Fe8HostShader shader;
     enum Fe8HostSpeedupRate speedup_rate;
     double zoom_sensitivity;

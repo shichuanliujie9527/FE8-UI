@@ -81,6 +81,14 @@ int main(void) {
     SendMessageW(window, WM_COMMAND, lcd, 0);
     fe8_macos_load_settings(&loaded_settings);
     assert(!loaded_settings.lcd_enabled && loaded_settings.lcd_brightness == 80);
+    assert(loaded_settings.lcd_gamma == 140);
+    HMENU compensation = GetSubMenu(settings, 9);
+    UINT gamma = GetMenuItemID(compensation, 3);
+    SendMessageW(window, WM_COMMAND, gamma, 0);
+    assert(library.settings.lcd_gamma == 160);
+    assert(GetMenuState(menu, gamma, MF_BYCOMMAND) & MF_CHECKED);
+    fe8_macos_load_settings(&loaded_settings);
+    assert(loaded_settings.lcd_gamma == 160);
     HMENU bindings = GetSubMenu(settings, 6);
     wchar_t label[160];
     assert(GetMenuStringW(bindings, 0, label, 160, MF_BYPOSITION));

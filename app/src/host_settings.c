@@ -125,6 +125,7 @@ void fe8_host_settings_init(Fe8HostSettings *settings) {
     settings->mouse_enabled = 1;
     settings->lcd_brightness = 40;
     settings->lcd_row_brightness = 160;
+    settings->lcd_gamma = 140;
     settings->shader = FE8_HOST_SHADER_OFF;
     settings->speedup_rate = FE8_HOST_SPEEDUP_4X;
     settings->zoom_sensitivity = FE8_HOST_ZOOM_SENSITIVITY_LOW;

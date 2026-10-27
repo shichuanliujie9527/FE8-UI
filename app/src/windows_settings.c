@@ -12,8 +12,9 @@
 
 static const wchar_t *settings_key = L"Software\\FE8 Extended Frontend";
 enum { AUDIO = 1200, VSYNC, EXTENDED, MOUSE, BINDING = 1400, HOTKEY = 1500,
-    SPEED = 1600, ZOOM = 1700, LCD = 1800, LCD_BRIGHTNESS = 1810, ABOUT = 1900 };
+    SPEED = 1600, ZOOM = 1700, LCD = 1800, LCD_BRIGHTNESS = 1810, LCD_GAMMA = 1820, ABOUT = 1900 };
 static const int lcd_levels[] = {10, 20, 40, 60, 80, 120};
+static const int lcd_gammas[] = {100, 120, 140, 160, 180, 220};
 static Fe8HostSettings *game_settings;
 static void *game_context;
 static Fe8HostStateCallback game_save, game_load;
@@ -40,6 +41,7 @@ static void save_preferences(const Fe8HostSettings *s) {
     store(L"Extended", s->extensions_enabled); store(L"Mouse", s->mouse_enabled);
     store(L"LCD", s->lcd_enabled); store(L"LCDBrightness", s->lcd_brightness);
     store(L"LCDRowBrightness", s->lcd_row_brightness);
+    store(L"LCDGamma", s->lcd_gamma);
     store(L"Speed", s->speedup_rate); store(L"Zoom", (int)(s->zoom_sensitivity * 10000 + .5));
     wchar_t key[32];
     for (int i = 0; i < FE8_HOST_BUTTON_COUNT; ++i) {
@@ -57,6 +59,7 @@ void fe8_macos_load_settings(Fe8HostSettings *s) {
     s->lcd_enabled = preference(L"LCD", s->lcd_enabled, 0, 1);
     s->lcd_brightness = preference(L"LCDBrightness", s->lcd_brightness, 10, 120);
     s->lcd_row_brightness = preference(L"LCDRowBrightness", s->lcd_row_brightness, 10, 320);
+    s->lcd_gamma = preference(L"LCDGamma", s->lcd_gamma, 100, 220);
     s->speedup_rate = preference(L"Speed", s->speedup_rate, 0, FE8_HOST_SPEEDUP_COUNT - 1);
     s->zoom_sensitivity = preference(L"Zoom", 50, 50, 300) / 10000.0;
     wchar_t key[32];
@@ -123,6 +126,14 @@ HMENU fe8_windows_menu(int in_game) {
         AppendMenuW(brightness, MF_STRING, LCD_BRIGHTNESS + i, label);
     }
     AppendMenuW(settings, MF_POPUP, (UINT_PTR)brightness, L"LCD brightness");
+    HMENU compensation = CreatePopupMenu();
+    for (int i = 0; i < 6; ++i) {
+        wchar_t label[64];
+        swprintf(label, 64, L"%.1f%ls", lcd_gammas[i] / 100.0,
+            i == 0 ? L" (original)" : i == 2 ? L" (default)" : L"");
+        AppendMenuW(compensation, MF_STRING, LCD_GAMMA + i, label);
+    }
+    AppendMenuW(settings, MF_POPUP, (UINT_PTR)compensation, L"LCD brightness compensation");
     AppendMenuW(bar, MF_POPUP, (UINT_PTR)settings, L"&Settings");
     if (in_game) AppendMenuW(bar, MF_STRING, FE8_WIN_ARMORY, L"&Armory");
     AppendMenuW(bar, MF_STRING, ABOUT, L"&Help");
@@ -134,6 +145,9 @@ void fe8_windows_update_menu(HWND window, const Fe8HostSettings *s) {
     int values[] = {s->audio_enabled, s->vsync_enabled, s->extensions_enabled, s->mouse_enabled};
     for (int i = 0; i < 4; ++i) CheckMenuItem(menu, AUDIO + i, MF_BYCOMMAND | (values[i] ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(menu, LCD, MF_BYCOMMAND | (s->lcd_enabled ? MF_CHECKED : MF_UNCHECKED));
+    for (int i = 0; i < 6; ++i)
+        CheckMenuItem(menu, LCD_GAMMA + i, MF_BYCOMMAND |
+            (s->lcd_gamma == lcd_gammas[i] ? MF_CHECKED : MF_UNCHECKED));
     for (int i = 0; i < 6; ++i)
         CheckMenuItem(menu, LCD_BRIGHTNESS + i, MF_BYCOMMAND |
             (s->lcd_brightness == lcd_levels[i] ? MF_CHECKED : MF_UNCHECKED));
@@ -273,7 +287,9 @@ int fe8_windows_menu_command(HWND window, unsigned command, Fe8HostSettings *s) 
         MessageBoxW(window, L"FE8 Extended Frontend\n\nAdd a .gba ROM to the library, then choose Play.\nResume State loads that game's last quick save.\n\nIn game: I opens Armory, F5 saves a state, F8 loads it,\nF6 toggles extended rendering. Settings lets you rebind keys.\n\nWindows uses the SDL renderer; CRT shader presets are not available.",
             L"FE8 help", MB_OK); return 1;
     default:
-        if (command >= LCD_BRIGHTNESS && command < LCD_BRIGHTNESS + 6)
+        if (command >= LCD_GAMMA && command < LCD_GAMMA + 6)
+            s->lcd_gamma = lcd_gammas[command - LCD_GAMMA];
+        else if (command >= LCD_BRIGHTNESS && command < LCD_BRIGHTNESS + 6)
             s->lcd_brightness = lcd_levels[command - LCD_BRIGHTNESS];
         else if (command >= SPEED && command < SPEED + FE8_HOST_SPEEDUP_COUNT) s->speedup_rate = command - SPEED;
         else if (command >= ZOOM && command < ZOOM + 3) {
